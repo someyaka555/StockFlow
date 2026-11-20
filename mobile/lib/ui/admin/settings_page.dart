@@ -30,25 +30,18 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             TextField(
               controller: _url,
-              decoration: const InputDecoration(
-                labelText: 'Base URL API',
-                hintText: 'http://10.0.2.2:3000/api',
-              ),
+              decoration: const InputDecoration(labelText: 'Base URL API', hintText: 'http://10.0.2.2:3000/api'),
             ),
             const SizedBox(height: 8),
             const Align(
               alignment: Alignment.centerLeft,
-              child: Text(
-                'Tips: emulator Android pakai 10.0.2.2, HP fisik pakai IP LAN server',
-                style: TextStyle(color: Colors.grey, fontSize: 12),
-              ),
+              child: Text('Tips: emulator Android pakai 10.0.2.2, HP fisik pakai IP LAN server', style: TextStyle(color: Colors.grey, fontSize: 12)),
             ),
             const SizedBox(height: 16),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Gunakan API Server'),
-              subtitle:
-                  const Text('Matikan untuk mode tester (mock lokal)'),
+              subtitle: const Text('Matikan untuk mode tester (mock lokal)'),
               value: _useApi,
               onChanged: (v) => setState(() => _useApi = v),
             ),
@@ -57,13 +50,9 @@ class _SettingsPageState extends State<SettingsPage> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () async {
-                  await context
-                      .read<SettingsProvider>()
-                      .save(_url.text.trim(), _useApi);
+                  await context.read<SettingsProvider>().save(_url.text.trim(), _useApi);
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Pengaturan disimpan')),
-                    );
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pengaturan disimpan')));
                   }
                 },
                 child: const Text('Simpan'),
