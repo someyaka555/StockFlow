@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme.dart';
 import '../../providers/auth_provider.dart';
+import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -10,8 +11,8 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _u = TextEditingController();
-  final _p = TextEditingController();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
   bool _obscure = true;
   bool _loading = false;
   String? _error;
@@ -21,7 +22,7 @@ class _LoginPageState extends State<LoginPage> {
       _error = null;
       _loading = true;
     });
-    final err = await context.read<AuthProvider>().login(_u.text.trim(), _p.text);
+    final err = await context.read<AuthProvider>().login(_email.text.trim(), _password.text);
     if (!mounted) return;
     setState(() {
       _loading = false;
@@ -40,8 +41,7 @@ class _LoginPageState extends State<LoginPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 88,
-                  height: 88,
+                  width: 88, height: 88,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [AppTheme.primary, Color(0xFF0EA5E9)],
@@ -53,22 +53,21 @@ class _LoginPageState extends State<LoginPage> {
                   child: const Icon(Icons.inventory_2_rounded, color: Colors.white, size: 48),
                 ),
                 const SizedBox(height: 20),
-                const Text('StockFlow',
-                    style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold)),
+                const Text('StockFlow', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
-                const Text('Kelola stok masuk & keluar',
-                    style: TextStyle(color: Colors.grey)),
+                const Text('Masuk untuk mengelola stok', style: TextStyle(color: Colors.grey)),
                 const SizedBox(height: 36),
                 TextField(
-                  controller: _u,
+                  controller: _email,
+                  keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(
-                    hintText: 'Username',
-                    prefixIcon: Icon(Icons.person_outline),
+                    hintText: 'Email',
+                    prefixIcon: Icon(Icons.email_outlined),
                   ),
                 ),
                 const SizedBox(height: 14),
                 TextField(
-                  controller: _p,
+                  controller: _password,
                   obscureText: _obscure,
                   onSubmitted: (_) => _submit(),
                   decoration: InputDecoration(
@@ -90,18 +89,23 @@ class _LoginPageState extends State<LoginPage> {
                   child: ElevatedButton(
                     onPressed: _loading ? null : _submit,
                     child: _loading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2),
-                          )
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                         : const Text('Masuk'),
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text('Akun dibuat oleh admin',
-                    style: TextStyle(color: Colors.grey, fontSize: 12)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Belum punya akun? ', style: TextStyle(color: Colors.grey)),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterPage()));
+                      },
+                      child: const Text('Daftar'),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
