@@ -95,12 +95,13 @@ class UserDashboard extends StatelessWidget {
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
                 children: [
+                  // Perbaikan: Mengirim Widget langsung, bukan fungsi ()
                   _menu(context, 'Barang Masuk', Icons.call_received,
-                      AppTheme.success, () => const StockInPage()),
+                      AppTheme.success, const StockInPage()),
                   _menu(context, 'Barang Keluar', Icons.call_made,
-                      AppTheme.danger, () => const StockOutPage()),
+                      AppTheme.danger, const StockOutPage()),
                   _menu(context, 'Produk', Icons.inventory, AppTheme.primary,
-                      () => const ProductListPage()),
+                      const ProductListPage()),
                 ],
               ),
             ),
@@ -110,9 +111,11 @@ class UserDashboard extends StatelessWidget {
     );
   }
 
+  // Fungsi ini menerima parameter 'Widget page'
   Widget _menu(BuildContext c, String title, IconData icon, Color color, Widget page) {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
+      // Perbaikan: Navigator.push langsung diletakkan di sini
       onTap: () => Navigator.push(c, MaterialPageRoute(builder: (_) => page)),
       child: Card(
         child: Column(
