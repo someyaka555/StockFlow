@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme.dart';
+import '../../data/models/client.dart';
 import '../../data/models/product.dart';
 import '../../data/models/stock_out.dart';
+import '../../data/repositories/client_repository.dart';
 import '../../data/repositories/product_repository.dart';
 import '../../data/repositories/stock_repository.dart';
 
@@ -80,15 +82,12 @@ class _StockOutPageState extends State<StockOutPage> {
                     child: ListTile(
                       leading: CircleAvatar(
                         backgroundColor: AppTheme.danger.withOpacity(0.15),
-                        child: const Icon(Icons.call_made,
-                            color: AppTheme.danger),
+                        child: const Icon(Icons.call_made, color: AppTheme.danger),
                       ),
                       title: Text(it.productNama),
-                      subtitle: Text('${it.clientNama} • ${it.clientKontak}'),
+                      subtitle: Text('Ke Client: ${it.clientNama}'),
                       trailing: Text('-${it.qty}',
-                          style: const TextStyle(
-                              color: AppTheme.danger,
-                              fontWeight: FontWeight.bold)),
+                          style: const TextStyle(color: AppTheme.danger, fontWeight: FontWeight.bold)),
                     ),
                   )),
           ],
@@ -99,17 +98,17 @@ class _StockOutPageState extends State<StockOutPage> {
 
   Future<void> _showAddDialog() async {
     final products = await ProductRepository().getAll();
+    final clients = await ClientRepository().getAll();
     if (!mounted) return;
-    if (products.isEmpty) {
+    if (products.isEmpty || clients.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Produk belum ada')),
+        const SnackBar(content: Text('Produk/Client belum ada')),
       );
       return;
     }
 
     ProductModel? selProduct = products.first;
-    final clientNama = TextEditingController();
-    final clientKontak = TextEditingController();
+    ClientModel? selClient = clients.first;
     final qty = TextEditingController();
 
     await showDialog(
@@ -123,22 +122,15 @@ class _StockOutPageState extends State<StockOutPage> {
               DropdownButtonFormField<ProductModel>(
                 value: selProduct,
                 decoration: const InputDecoration(labelText: 'Produk'),
-                items: products
-                    .map((p) => DropdownMenuItem(
-                        value: p, child: Text('${p.nama} (stok ${p.stokTotal})')))
-                    .toList(),
+                items: products.map((p) => DropdownMenuItem(value: p, child: Text('${p.nama} (stok ${p.stokTotal})'))).toList(),
                 onChanged: (v) => selProduct = v,
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: clientNama,
-                decoration: const InputDecoration(labelText: 'Nama Client'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: clientKontak,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'No. Kontak'),
+              DropdownButtonFormField<ClientModel>(
+                value: selClient,
+                decoration: const InputDecoration(labelText: 'Ke Client'),
+                items: clients.map((c) => DropdownMenuItem(value: c, child: Text(c.nama))).toList(),
+                onChanged: (v) => selClient = v,
               ),
               const SizedBox(height: 12),
               TextField(
@@ -150,37 +142,32 @@ class _StockOutPageState extends State<StockOutPage> {
           ),
         ),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
           ElevatedButton(
             onPressed: () async {
               final q = int.tryParse(qty.text);
-              if (q == null || q <= 0 || clientNama.text.isEmpty) return;
+              if (q == null || q <= 0) return;
               if (q > selProduct!.stokTotal) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: Text(
-                          'Stok tidak cukup (tersisa ${selProduct!.stokTotal})')),
+                  SnackBar(content: Text('Stok tidak cukup (tersisa ${selProduct!.stokTotal})')),
                 );
                 return;
               }
               final model = StockOutModel(
-  clientNama: clientNama.text,
-  clientKontak: clientKontak.text,
-  productId: selProduct!.id!,
-  productNama: selProduct!.nama,
-  qty: q,
-  tanggal: DateFormat('yyyy-MM-dd').format(_date),
-);
+                clientId: selClient!.id!,
+                clientNama: selClient!.nama,
+                productId: selProduct!.id!,
+                productNama: selProduct!.nama,
+                qty: q,
+                tanggal: DateFormat('yyyy-MM-dd').format(_date),
+              );
               try {
                 await _repo.addStockOut(model);
                 if (mounted) Navigator.pop(context);
                 _load();
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(SnackBar(content: Text(e.toString())));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
                 }
               }
             },

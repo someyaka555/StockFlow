@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme.dart';
+import '../../data/models/client.dart';
 import '../../data/models/product.dart';
 import '../../data/models/stock_in.dart';
-import '../../data/models/supplier.dart';
+import '../../data/repositories/client_repository.dart';
 import '../../data/repositories/product_repository.dart';
 import '../../data/repositories/stock_repository.dart';
-import '../../data/repositories/supplier_repository.dart';
 
 class StockInPage extends StatefulWidget {
   const StockInPage({super.key});
@@ -71,23 +71,19 @@ class _StockInPageState extends State<StockInPage> {
             ),
             const SizedBox(height: 12),
             if (_summary.isNotEmpty) ...[
-              const Text('Rekap per Asal',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Rekap per Client', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               ..._summary.map((s) => Card(
                     child: ListTile(
                       dense: true,
-                      title: Text(s['supplier_nama'] ?? '-'),
+                      title: Text(s['client_nama'] ?? '-'),
                       trailing: Text('${s['total']} unit',
-                          style: const TextStyle(
-                              color: AppTheme.success,
-                              fontWeight: FontWeight.bold)),
+                          style: const TextStyle(color: AppTheme.success, fontWeight: FontWeight.bold)),
                     ),
                   )),
               const SizedBox(height: 12),
             ],
-            const Text('Detail Transaksi',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Detail Transaksi', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             if (_loading)
               const Padding(
@@ -104,15 +100,12 @@ class _StockInPageState extends State<StockInPage> {
                     child: ListTile(
                       leading: CircleAvatar(
                         backgroundColor: AppTheme.success.withOpacity(0.15),
-                        child: const Icon(Icons.call_received,
-                            color: AppTheme.success),
+                        child: const Icon(Icons.call_received, color: AppTheme.success),
                       ),
                       title: Text(it.productNama),
-                      subtitle: Text('Asal: ${it.supplierNama}'),
+                      subtitle: Text('Dari Client: ${it.clientNama}'),
                       trailing: Text('+${it.qty}',
-                          style: const TextStyle(
-                              color: AppTheme.success,
-                              fontWeight: FontWeight.bold)),
+                          style: const TextStyle(color: AppTheme.success, fontWeight: FontWeight.bold)),
                     ),
                   )),
           ],
@@ -123,17 +116,17 @@ class _StockInPageState extends State<StockInPage> {
 
   Future<void> _showAddDialog() async {
     final products = await ProductRepository().getAll();
-    final suppliers = await SupplierRepository().getAll();
+    final clients = await ClientRepository().getAll();
     if (!mounted) return;
-    if (products.isEmpty || suppliers.isEmpty) {
+    if (products.isEmpty || clients.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Produk/Supplier belum ada, minta admin menambah')),
+        const SnackBar(content: Text('Produk/Client belum ada, silakan tambah terlebih dahulu')),
       );
       return;
     }
 
     ProductModel? selProduct = products.first;
-    SupplierModel? selSupplier = suppliers.first;
+    ClientModel? selClient = clients.first;
     final qty = TextEditingController();
     final catatan = TextEditingController();
 
@@ -148,19 +141,15 @@ class _StockInPageState extends State<StockInPage> {
               DropdownButtonFormField<ProductModel>(
                 value: selProduct,
                 decoration: const InputDecoration(labelText: 'Produk'),
-                items: products
-                    .map((p) => DropdownMenuItem(value: p, child: Text(p.nama)))
-                    .toList(),
+                items: products.map((p) => DropdownMenuItem(value: p, child: Text(p.nama))).toList(),
                 onChanged: (v) => selProduct = v,
               ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<SupplierModel>(
-                value: selSupplier,
-                decoration: const InputDecoration(labelText: 'Asal / Supplier'),
-                items: suppliers
-                    .map((s) => DropdownMenuItem(value: s, child: Text(s.nama)))
-                    .toList(),
-                onChanged: (v) => selSupplier = v,
+              DropdownButtonFormField<ClientModel>(
+                value: selClient,
+                decoration: const InputDecoration(labelText: 'Dari Client'),
+                items: clients.map((c) => DropdownMenuItem(value: c, child: Text(c.nama))).toList(),
+                onChanged: (v) => selClient = v,
               ),
               const SizedBox(height: 12),
               TextField(
@@ -177,31 +166,28 @@ class _StockInPageState extends State<StockInPage> {
           ),
         ),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
           ElevatedButton(
             onPressed: () async {
               final q = int.tryParse(qty.text);
               if (q == null || q <= 0) return;
               final model = StockInModel(
-  productId: selProduct!.id!,
-  productNama: selProduct!.nama,
-  productSatuan: selProduct!.satuan,
-  supplierId: selSupplier!.id!,
-  supplierNama: selSupplier!.nama,
-  qty: q,
-  tanggal: DateFormat('yyyy-MM-dd').format(_date),
-  catatan: catatan.text,
-);
+                productId: selProduct!.id!,
+                productNama: selProduct!.nama,
+                productSatuan: selProduct!.satuan,
+                clientId: selClient!.id!,
+                clientNama: selClient!.nama,
+                qty: q,
+                tanggal: DateFormat('yyyy-MM-dd').format(_date),
+                catatan: catatan.text,
+              );
               try {
                 await _repo.addStockIn(model);
                 if (mounted) Navigator.pop(context);
                 _load();
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(SnackBar(content: Text(e.toString())));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
                 }
               }
             },
