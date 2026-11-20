@@ -2,8 +2,8 @@ name: Build StockFlow APK
 
 on:
   push:
-    branches: [ main, master ] # <-- Ini yang membuatnya berjalan otomatis
-  workflow_dispatch: # Tetap disediakan jika kamu ingin jalankan manual
+    branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -25,18 +25,29 @@ jobs:
           channel: 'stable'
           cache: true
 
+      # 1. Buat folder android dari nol (Otomatis benar formatnya)
       - name: Generate Android Folder
         working-directory: ./mobile
         run: flutter create . --project-name stock_app --platforms android
 
-      - name: Generate Keystore
+      # 2. Suntikkan konfigurasi Keystore (Release) ke dalam build.gradle yang baru dibuat
+      - name: Inject Release Signing
         working-directory: ./mobile/android
         run: |
+          # Buat file keystore
           keytool -genkey -v -keystore app/release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias release -storepass password123 -keypass password123 -dname "CN=StockFlow, OU=Dev, O=StockFlow, L=City, S=State, C=ID"
+          
+          # Buat file key.properties
           echo "storePassword=password123" > key.properties
           echo "keyPassword=password123" >> key.properties
           echo "keyAlias=release" >> key.properties
           echo "storeFile=release-key.jks" >> key.properties
+          
+          # Edit file app/build.gradle.kts (format baru Flutter) menggunakan sed
+          sed -i 's/buildTypes {/signingConfigs {\n        create("release") {\n            storeFile = file("release-key.jks")\n            storePassword = "password123"\n            keyAlias = "release"\n            keyPassword = "password123"\n        }\n    }\n    buildTypes {/' app/build.gradle.kts
+          
+          # Terapkan signing config ke rilis
+          sed -i 's/getByName("release") {/getByName("release") {\n            signingConfig = signingConfigs.getByName("release")/' app/build.gradle.kts
 
       - name: Get Dependencies
         working-directory: ./mobile
