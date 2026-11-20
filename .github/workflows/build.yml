@@ -2,38 +2,49 @@ name: Build StockFlow APK
 
 on:
   push:
-    branches: [ main, master ] # Akan berjalan otomatis jika kamu push ke branch main/master
-  workflow_dispatch: # Menambahkan tombol agar bisa dijalankan manual dari tab Actions
+    branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # 1. Ambil kode dari repository
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # 2. Siapkan Java (Wajib untuk Gradle Android)
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
+      # 3. Siapkan Flutter SDK
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0' # Sesuaikan dengan versi Flutter yang kamu pakai (bisa dicek di pubspec.yaml)
+          flutter-version: '3.22.0'
           channel: 'stable'
           cache: true
 
+      # 4. Buat folder android secara otomatis
+      # (Karena kamu hanya upload folder lib dan pubspec.yaml)
+      - name: Generate Android Folder
+        working-directory: ./mobile
+        run: flutter create . --project-name stock_app --platforms android
+
+      # 5. Ambil semua library yang terdaftar di pubspec.yaml
       - name: Get Dependencies
-        working-directory: ./mobile # Karena project flutter ada di dalam folder mobile
+        working-directory: ./mobile
         run: flutter pub get
 
+      # 6. Proses Build APK
       - name: Build APK (Debug)
         working-directory: ./mobile
         run: flutter build apk --debug
-        # Catatan: Kita pakai --debug dulu agar tidak perlu setting keystore release.
 
+      # 7. Simpan hasil APK agar bisa diunduh
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
