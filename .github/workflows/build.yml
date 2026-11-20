@@ -1,7 +1,9 @@
 name: Build StockFlow APK
 
 on:
-  workflow_dispatch: # Hanya bisa dijalankan manual
+  push:
+    branches: [ main, master ] # <-- Ini yang membuatnya berjalan otomatis
+  workflow_dispatch: # Tetap disediakan jika kamu ingin jalankan manual
 
 jobs:
   build:
@@ -23,12 +25,10 @@ jobs:
           channel: 'stable'
           cache: true
 
-      # 1. Buat folder android secara otomatis
       - name: Generate Android Folder
         working-directory: ./mobile
         run: flutter create . --project-name stock_app --platforms android
 
-      # 2. Buat Keystore Otomatis untuk Release
       - name: Generate Keystore
         working-directory: ./mobile/android
         run: |
@@ -42,12 +42,10 @@ jobs:
         working-directory: ./mobile
         run: flutter pub get
 
-      # 3. Build Release APK (bukan debug lagi)
       - name: Build APK (Release)
         working-directory: ./mobile
         run: flutter build apk --release
 
-      # 4. Upload APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
