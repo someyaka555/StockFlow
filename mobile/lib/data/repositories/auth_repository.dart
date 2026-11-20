@@ -4,29 +4,30 @@ import '../api/api_client.dart';
 import '../models/user.dart';
 
 class AuthRepository {
-  Future<UserModel?> login(String username, String password) async {
+  Future<UserModel?> login(String email, String password) async {
     if (!AppConstants.useApi) {
-      // Mock lokal
-      if (username == 'admin' && password == 'admin123') {
-        return UserModel(
-          id: 'mock-admin',
-          username: 'admin',
-          nama: 'Administrator',
-          role: UserRole.admin,
-        );
+      // Daftar akun mock untuk tester
+      final users = [
+        UserModel(id: 'mock-admin', username: 'Administrator', email: 'admin@stockflow.com', role: UserRole.admin, isVerified: false),
+        UserModel(id: 'mock-user', username: 'User Satu', email: 'user1@stockflow.com', role: UserRole.user, isVerified: false),
+        
+        // Akun instan (mengambil dari constants)
+        if (AppConstants.mockVerifiedEmails.contains('admin2@stockflow.com'))
+          UserModel(id: 'mock-admin2', username: 'Admin Tester', email: 'admin2@stockflow.com', role: UserRole.admin, isVerified: true),
+        if (AppConstants.mockVerifiedEmails.contains('user2@stockflow.com'))
+          UserModel(id: 'mock-user2', username: 'User Tester', email: 'user2@stockflow.com', role: UserRole.user, isVerified: true),
+      ];
+      
+      try {
+        return users.firstWhere((u) => u.email == email);
+      } catch (_) {
+        return null;
       }
-      if (username == 'user1' && password == 'user123') {
-        return UserModel(
-          id: 'mock-user',
-          username: 'user1',
-          nama: 'User Satu',
-          role: UserRole.user,
-        );
-      }
-      return null;
     }
+    
+    // Jalur API Asli
     final res = await ApiClient().dio.post('/auth/login', data: {
-      'username': username,
+      'email': email,
       'password': password,
     });
     final token = res.data['token'] as String;
@@ -39,24 +40,13 @@ class AuthRepository {
     if (!AppConstants.useApi) {
       final prefs = await SharedPreferences.getInstance();
       final id = prefs.getString('mock_user_id');
-      if (id == 'mock-admin') {
-        return UserModel(
-          id: 'mock-admin',
-          username: 'admin',
-          nama: 'Administrator',
-          role: UserRole.admin,
-        );
-      }
-      if (id == 'mock-user') {
-        return UserModel(
-          id: 'mock-user',
-          username: 'user1',
-          nama: 'User Satu',
-          role: UserRole.user,
-        );
-      }
+      if (id == 'mock-admin') return UserModel(id: 'mock-admin', username: 'Administrator', email: 'admin@stockflow.com', role: UserRole.admin, isVerified: false);
+      if (id == 'mock-admin2') return UserModel(id: 'mock-admin2', username: 'Admin Tester', email: 'admin2@stockflow.com', role: UserRole.admin, isVerified: true);
+      if (id == 'mock-user') return UserModel(id: 'mock-user', username: 'User Satu', email: 'user1@stockflow.com', role: UserRole.user, isVerified: false);
+      if (id == 'mock-user2') return UserModel(id: 'mock-user2', username: 'User Tester', email: 'user2@stockflow.com', role: UserRole.user, isVerified: true);
       return null;
     }
+    
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
     if (token == null) return null;

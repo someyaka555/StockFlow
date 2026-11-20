@@ -3,6 +3,11 @@ import '../api/api_client.dart';
 import '../models/product.dart';
 
 class ProductRepository {
+  static final List<ProductModel> _mock = [
+    ProductModel(id: 'p1', nama: 'Produk A', kode: 'PRD-A', stokTotal: 100, satuan: 'pcs'),
+    ProductModel(id: 'p2', nama: 'Produk B', kode: 'PRD-B', stokTotal: 50, satuan: 'box'),
+  ];
+
   Future<List<ProductModel>> getAll() async {
     if (!AppConstants.useApi) return List.from(_mock);
     final res = await ApiClient().dio.get('/products');
@@ -48,9 +53,4 @@ class ProductRepository {
     }
     await ApiClient().dio.delete('/products/$id');
   }
-
-  static final List<ProductModel> _mock = [
-    ProductModel(id: 'p1', nama: 'Produk A', kode: 'PRD-A', stokTotal: 100, satuan: 'pcs'),
-    ProductModel(id: 'p2', nama: 'Produk B', kode: 'PRD-B', stokTotal: 50, satuan: 'box'),
-  ];
 }

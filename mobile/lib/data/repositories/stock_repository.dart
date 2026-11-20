@@ -4,11 +4,9 @@ import '../models/stock_in.dart';
 import '../models/stock_out.dart';
 
 class StockRepository {
-  // Mock storage (in-memory) untuk mode tester
   static final List<StockInModel> _mockIn = [];
   static final List<StockOutModel> _mockOut = [];
 
-  // ============ BARANG MASUK ============
   Future<void> addStockIn(StockInModel s) async {
     if (!AppConstants.useApi) {
       _mockIn.insert(0, s);
@@ -21,8 +19,7 @@ class StockRepository {
     if (!AppConstants.useApi) {
       return _mockIn.where((e) => e.tanggal == date).toList();
     }
-    final res = await ApiClient().dio.get('/stock/in',
-        queryParameters: {'tanggal': date});
+    final res = await ApiClient().dio.get('/stock/in', queryParameters: {'tanggal': date});
     return (res.data as List).map((e) => StockInModel.fromJson(e)).toList();
   }
 
@@ -31,24 +28,14 @@ class StockRepository {
       final filtered = _mockIn.where((e) => e.tanggal == date);
       final Map<String, int> grouped = {};
       for (final item in filtered) {
-        grouped[item.supplierNama] =
-            (grouped[item.supplierNama] ?? 0) + item.qty;
+        grouped[item.clientNama] = (grouped[item.clientNama] ?? 0) + item.qty;
       }
-      return grouped.entries
-          .map((e) => {'supplier_nama': e.key, 'total': e.value})
-          .toList();
+      return grouped.entries.map((e) => {'client_nama': e.key, 'total': e.value}).toList();
     }
-    final res = await ApiClient().dio.get('/stock/in/summary',
-        queryParameters: {'tanggal': date});
-    return (res.data as List)
-        .map((e) => {
-              'supplier_nama': e['supplierNama'],
-              'total': e['total'],
-            })
-        .toList();
+    final res = await ApiClient().dio.get('/stock/in/summary', queryParameters: {'tanggal': date});
+    return (res.data as List).map((e) => {'client_nama': e['clientNama'], 'total': e['total']}).toList();
   }
 
-  // ============ BARANG KELUAR ============
   Future<void> addStockOut(StockOutModel s) async {
     if (!AppConstants.useApi) {
       _mockOut.insert(0, s);
@@ -61,8 +48,7 @@ class StockRepository {
     if (!AppConstants.useApi) {
       return _mockOut.where((e) => e.tanggal == date).toList();
     }
-    final res = await ApiClient().dio.get('/stock/out',
-        queryParameters: {'tanggal': date});
+    final res = await ApiClient().dio.get('/stock/out', queryParameters: {'tanggal': date});
     return (res.data as List).map((e) => StockOutModel.fromJson(e)).toList();
   }
 }
