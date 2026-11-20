@@ -102,16 +102,11 @@ class AdminDashboard extends StatelessWidget {
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
                 children: [
-                  _menu(context, 'Kelola User', Icons.people,
-                      const UserManagementPage()),
-                  _menu(context, 'Kelola Produk', Icons.inventory_2,
-                      const ProductManagementPage()),
-                  _menu(context, 'Kelola Supplier', Icons.local_shipping,
-                      const SupplierManagementPage()),
-                  _menu(context, 'Pengaturan API', Icons.settings,
-                      const SettingsPage()),
-                  _menu(context, 'Mode User', Icons.person,
-                      const UserDashboard(), isSwitch: true),
+                  _menu(context, 'Kelola User', Icons.people, const UserManagementPage()),
+                  _menu(context, 'Kelola Produk', Icons.inventory_2, const ProductManagementPage()),
+                  _menu(context, 'Kelola Supplier', Icons.local_shipping, const SupplierManagementPage()),
+                  _menu(context, 'Pengaturan API', Icons.settings, const SettingsPage()),
+                  _menu(context, 'Mode User', Icons.person, const UserDashboard(), isSwitch: true),
                 ],
               ),
             ),
@@ -121,14 +116,17 @@ class AdminDashboard extends StatelessWidget {
     );
   }
 
+  // Diperbaiki: Menerima parameter 'Widget page'
   Widget _menu(BuildContext c, String title, IconData icon, Widget page,
       {bool isSwitch = false}) {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
         if (isSwitch) {
+          // Jika menu "Mode User", panggil fungsi toggle, jangan pindah halaman
           c.read<AuthProvider>().toggleMode();
         } else {
+          // Jika menu biasa, pindah ke halaman tujuan
           Navigator.push(c, MaterialPageRoute(builder: (_) => page));
         }
       },
