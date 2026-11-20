@@ -25,12 +25,12 @@ jobs:
           channel: 'stable'
           cache: true
 
-      # 1. Buat folder android dari nol (Otomatis benar formatnya)
+      # 1. Buat folder android dari nol
       - name: Generate Android Folder
         working-directory: ./mobile
         run: flutter create . --project-name stock_app --platforms android
 
-      # 2. Suntikkan konfigurasi Keystore (Release) ke dalam build.gradle yang baru dibuat
+      # 2. Suntikkan konfigurasi Keystore (Release) ke dalam build.gradle (BUKAN .kts)
       - name: Inject Release Signing
         working-directory: ./mobile/android
         run: |
@@ -43,11 +43,11 @@ jobs:
           echo "keyAlias=release" >> key.properties
           echo "storeFile=release-key.jks" >> key.properties
           
-          # Edit file app/build.gradle.kts (format baru Flutter) menggunakan sed
-          sed -i 's/buildTypes {/signingConfigs {\n        create("release") {\n            storeFile = file("release-key.jks")\n            storePassword = "password123"\n            keyAlias = "release"\n            keyPassword = "password123"\n        }\n    }\n    buildTypes {/' app/build.gradle.kts
+          # Edit file app/build.gradle (Groovy)
+          sed -i 's/buildTypes {/signingConfigs {\n        release {\n            storeFile file("release-key.jks")\n            storePassword "password123"\n            keyAlias "release"\n            keyPassword "password123"\n        }\n    }\n    buildTypes {/' app/build.gradle
           
           # Terapkan signing config ke rilis
-          sed -i 's/getByName("release") {/getByName("release") {\n            signingConfig = signingConfigs.getByName("release")/' app/build.gradle.kts
+          sed -i 's/release {/release {\n            signingConfig signingConfigs.release/' app/build.gradle
 
       - name: Get Dependencies
         working-directory: ./mobile
