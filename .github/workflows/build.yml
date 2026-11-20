@@ -30,7 +30,7 @@ jobs:
         working-directory: ./mobile
         run: flutter create . --project-name stock_app --platforms android
 
-      # 2. Suntikkan konfigurasi Keystore (Release) ke dalam build.gradle (BUKAN .kts)
+      # 2. Suntikkan konfigurasi Keystore (Cara Baru & Aman)
       - name: Inject Release Signing
         working-directory: ./mobile/android
         run: |
@@ -43,11 +43,19 @@ jobs:
           echo "keyAlias=release" >> key.properties
           echo "storeFile=release-key.jks" >> key.properties
           
-          # Edit file app/build.gradle (Groovy)
-          sed -i 's/buildTypes {/signingConfigs {\n        release {\n            storeFile file("release-key.jks")\n            storePassword "password123"\n            keyAlias "release"\n            keyPassword "password123"\n        }\n    }\n    buildTypes {/' app/build.gradle
-          
-          # Terapkan signing config ke rilis
-          sed -i 's/release {/release {\n            signingConfig signingConfigs.release/' app/build.gradle
+          # Cek file apa yang dibuat Flutter (build.gradle atau build.gradle.kts)
+          if [ -f "app/build.gradle.kts" ]; then
+            TARGET="app/build.gradle.kts"
+            # Format Kotlin
+            sed -i 's/buildTypes {/signingConfigs {\n        create("release") {\n            storeFile = file("release-key.jks")\n            storePassword = "password123"\n            keyAlias = "release"\n            keyPassword = "password123"\n        }\n    }\n    buildTypes {/' $TARGET
+            sed -i 's/getByName("release") {/getByName("release") {\n            signingConfig = signingConfigs.getByName("release")/' $TARGET
+          else
+            TARGET="app/build.gradle"
+            # Format Groovy
+            sed -i 's/buildTypes {/signingConfigs {\n        release {\n            storeFile file("release-key.jks")\n            storePassword "password123"\n            keyAlias "release"\n            keyPassword "password123"\n        }\n    }\n    buildTypes {/' $TARGET
+            sed -i 's/release {/release {\n            signingConfig signingConfigs.release/' $TARGET
+          fi
+          echo "Konfigurasi release berhasil disuntikkan ke $TARGET"
 
       - name: Get Dependencies
         working-directory: ./mobile
