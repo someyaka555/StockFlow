@@ -7,12 +7,14 @@ class AuthProvider extends ChangeNotifier {
   UserModel? _user;
   bool _loading = true;
   bool _adminMode = false;
+  bool _needsVerification = false;
 
   UserModel? get user => _user;
   bool get loading => _loading;
   bool get isLoggedIn => _user != null;
   bool get isAdmin => _user?.role == UserRole.admin;
   bool get adminMode => _adminMode;
+  bool get needsVerification => _needsVerification;
 
   Future<void> init() async {
     _user = await _repo.getCurrentUser();
@@ -21,13 +23,21 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String?> login(String username, String password) async {
+  Future<String?> login(String email, String password) async {
     try {
-      final u = await _repo.login(username, password);
-      if (u == null) return 'Username atau password salah';
+      final u = await _repo.login(email, password);
+      if (u == null) return 'Email tidak terdaftar atau password salah';
+      
       _user = u;
       _adminMode = u.role == UserRole.admin;
-      await _repo.saveMockSession(u);
+      
+      // Jika belum verifikasi, arahkan ke halaman verifikasi
+      if (!u.isVerified) {
+        _needsVerification = true;
+      } else {
+        await _repo.saveMockSession(u);
+      }
+      
       notifyListeners();
       return null;
     } catch (e) {
@@ -35,10 +45,27 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  void verifySuccess() {
+    _needsVerification = false;
+    if (_user != null) {
+      _user = UserModel(
+        id: _user!.id, 
+        username: _user!.username, 
+        email: _user!.email, 
+        role: _user!.role, 
+        active: _user!.active, 
+        isVerified: true
+      );
+      _repo.saveMockSession(_user!);
+    }
+    notifyListeners();
+  }
+
   Future<void> logout() async {
     await _repo.logout();
     _user = null;
     _adminMode = false;
+    _needsVerification = false;
     notifyListeners();
   }
 
