@@ -30,7 +30,7 @@ jobs:
         working-directory: ./mobile
         run: flutter create . --project-name stock_app --platforms android
 
-      # 2. Suntikkan konfigurasi Keystore (Cara Baru & Aman)
+      # 2. Timpa build.gradle dengan konfigurasi Release yang sudah pasti benar
       - name: Inject Release Signing
         working-directory: ./mobile/android
         run: |
@@ -43,19 +43,76 @@ jobs:
           echo "keyAlias=release" >> key.properties
           echo "storeFile=release-key.jks" >> key.properties
           
-          # Cek file apa yang dibuat Flutter (build.gradle atau build.gradle.kts)
-          if [ -f "app/build.gradle.kts" ]; then
-            TARGET="app/build.gradle.kts"
-            # Format Kotlin
-            sed -i 's/buildTypes {/signingConfigs {\n        create("release") {\n            storeFile = file("release-key.jks")\n            storePassword = "password123"\n            keyAlias = "release"\n            keyPassword = "password123"\n        }\n    }\n    buildTypes {/' $TARGET
-            sed -i 's/getByName("release") {/getByName("release") {\n            signingConfig = signingConfigs.getByName("release")/' $TARGET
-          else
-            TARGET="app/build.gradle"
-            # Format Groovy
-            sed -i 's/buildTypes {/signingConfigs {\n        release {\n            storeFile file("release-key.jks")\n            storePassword "password123"\n            keyAlias "release"\n            keyPassword "password123"\n        }\n    }\n    buildTypes {/' $TARGET
-            sed -i 's/release {/release {\n            signingConfig signingConfigs.release/' $TARGET
-          fi
-          echo "Konfigurasi release berhasil disuntikkan ke $TARGET"
+          # Timpa file app/build.gradle dengan konfigurasi yang 100% valid
+          cat > app/build.gradle << 'EOF'
+          plugins {
+              id "com.android.application"
+              id "kotlin-android"
+              id "dev.flutter.flutter-gradle-plugin"
+          }
+
+          def localProperties = new Properties()
+          def localPropertiesFile = rootProject.file('local.properties')
+          if (localPropertiesFile.exists()) {
+              localPropertiesFile.withReader('UTF-8') { reader ->
+                  localProperties.load(reader)
+              }
+          }
+
+          def keystoreProperties = new Properties()
+          def keystorePropertiesFile = rootProject.file('key.properties')
+          if (keystorePropertiesFile.exists()) {
+              keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+          }
+
+          android {
+              namespace "com.example.stock_app"
+              compileSdkVersion flutter.compileSdkVersion
+              ndkVersion flutter.ndkVersion
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_1_8
+                  targetCompatibility JavaVersion.VERSION_1_8
+              }
+
+              kotlinOptions {
+                  jvmTarget = '1.8'
+              }
+
+              sourceSets {
+                  main.java.srcDirs += 'src/main/kotlin'
+              }
+
+              defaultConfig {
+                  applicationId "com.example.stock_app"
+                  minSdkVersion flutter.minSdkVersion
+                  targetSdkVersion flutter.targetSdkVersion
+                  versionCode flutterVersionCode.toInteger()
+                  versionName flutterVersionName
+              }
+
+              signingConfigs {
+                  release {
+                      keyAlias keystoreProperties['keyAlias']
+                      keyPassword keystoreProperties['keyPassword']
+                      storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+                      storePassword keystoreProperties['storePassword']
+                  }
+              }
+
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                      minifyEnabled true
+                      shrinkResources true
+                  }
+              }
+          }
+
+          flutter {
+              source '../..'
+          }
+          EOF
 
       - name: Get Dependencies
         working-directory: ./mobile
