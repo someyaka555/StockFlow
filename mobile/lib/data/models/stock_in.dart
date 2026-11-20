@@ -3,8 +3,8 @@ class StockInModel {
   final String productId;
   final String productNama;
   final String productSatuan;
-  final String supplierId;
-  final String supplierNama;
+  final String clientId;
+  final String clientNama;
   final int qty;
   final String tanggal;
   final String? catatan;
@@ -14,8 +14,8 @@ class StockInModel {
     required this.productId,
     this.productNama = '',
     this.productSatuan = '',
-    required this.supplierId,
-    this.supplierNama = '',
+    required this.clientId,
+    this.clientNama = '',
     required this.qty,
     required this.tanggal,
     this.catatan,
@@ -23,7 +23,7 @@ class StockInModel {
 
   Map<String, dynamic> toJson() => {
         'product': productId,
-        'supplier': supplierId,
+        'client': clientId,
         'qty': qty,
         'tanggal': tanggal,
         'catatan': catatan ?? '',
@@ -31,14 +31,14 @@ class StockInModel {
 
   factory StockInModel.fromJson(Map<String, dynamic> m) {
     final p = m['product'];
-    final s = m['supplier'];
+    final c = m['client'];
     return StockInModel(
       id: m['_id']?.toString(),
       productId: p is Map ? p['_id'].toString() : p.toString(),
       productNama: p is Map ? (p['nama'] ?? '') : '',
       productSatuan: p is Map ? (p['satuan'] ?? '') : '',
-      supplierId: s is Map ? s['_id'].toString() : s.toString(),
-      supplierNama: s is Map ? (s['nama'] ?? '') : '',
+      clientId: c is Map ? c['_id'].toString() : c.toString(),
+      clientNama: c is Map ? (c['nama'] ?? '') : '',
       qty: m['qty'] ?? 0,
       tanggal: m['tanggal'] ?? '',
       catatan: m['catatan'] ?? '',

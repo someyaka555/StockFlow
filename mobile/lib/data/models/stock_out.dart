@@ -1,7 +1,7 @@
 class StockOutModel {
   final String? id;
+  final String clientId;
   final String clientNama;
-  final String clientKontak;
   final String productId;
   final String productNama;
   final int qty;
@@ -9,8 +9,8 @@ class StockOutModel {
 
   StockOutModel({
     this.id,
+    required this.clientId,
     required this.clientNama,
-    required this.clientKontak,
     required this.productId,
     this.productNama = '',
     required this.qty,
@@ -18,8 +18,7 @@ class StockOutModel {
   });
 
   Map<String, dynamic> toJson() => {
-        'clientNama': clientNama,
-        'clientKontak': clientKontak,
+        'client': clientId,
         'product': productId,
         'qty': qty,
         'tanggal': tanggal,
@@ -27,10 +26,11 @@ class StockOutModel {
 
   factory StockOutModel.fromJson(Map<String, dynamic> m) {
     final p = m['product'];
+    final c = m['client'];
     return StockOutModel(
       id: m['_id']?.toString(),
-      clientNama: m['clientNama'] ?? '',
-      clientKontak: m['clientKontak'] ?? '',
+      clientId: c is Map ? c['_id'].toString() : c.toString(),
+      clientNama: c is Map ? (c['nama'] ?? '') : '',
       productId: p is Map ? p['_id'].toString() : p.toString(),
       productNama: p is Map ? (p['nama'] ?? '') : '',
       qty: m['qty'] ?? 0,
