@@ -41,30 +41,62 @@ class _UserManagementPageState extends State<UserManagementPage> {
                 final u = _items[i];
                 return Card(
                   child: ListTile(
-                    leading: CircleAvatar(child: Text(u.username.isNotEmpty ? u.username[0].toUpperCase() : '?')),
-                    title: Text(u.username),
+                    leading: CircleAvatar(
+                      backgroundColor: u.isBlocked ? Colors.red.withOpacity(0.2) : Colors.blue.withOpacity(0.2),
+                      child: Text(u.username.isNotEmpty ? u.username[0].toUpperCase() : '?'),
+                    ),
+                    title: Text(u.username, style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      decoration: u.isBlocked ? TextDecoration.lineThrough : null,
+                    )),
                     subtitle: Text('${u.email} • ${u.role.name}'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.blue),
-                          onPressed: () => _showEditDialog(u),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () async {
-                            if (u.id == null) return;
-                            await _repo.delete(u.id!);
-                            _load();
-                          },
-                        ),
+                    trailing: PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert),
+                      onSelected: (value) async {
+                        if (value == 'detail') {
+                          _showDetailDialog(u);
+                        } else if (value == 'edit') {
+                          _showEditDialog(u);
+                        } else if (value == 'block') {
+                          _toggleBlock(u);
+                        } else if (value == 'delete') {
+                          _deleteUser(u);
+                        }
+                      },
+                      itemBuilder: (_) => [
+                        const PopupMenuItem(value: 'detail', child: Text('Lihat Detail')),
+                        const PopupMenuItem(value: 'edit', child: Text('Edit Role')),
+                        PopupMenuItem(value: 'block', child: Text(u.isBlocked ? 'Buka Blokir' : 'Blokir User')),
+                        const PopupMenuItem(value: 'delete', child: Text('Hapus', style: TextStyle(color: Colors.red))),
                       ],
                     ),
                   ),
                 );
               },
             ),
+    );
+  }
+
+  void _showDetailDialog(UserModel u) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Detail User'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Nama: ${u.username}'),
+            Text('Email: ${u.email}'),
+            Text('Sandi: (Simulasi: password123)'), // Di mode tester, kita tampilkan sandi default
+            Text('Role: ${u.role.name}'),
+            Text('Status: ${u.isBlocked ? "Diblokir" : "Aktif"}'),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Tutup')),
+        ],
+      ),
     );
   }
 
@@ -88,10 +120,11 @@ class _UserManagementPageState extends State<UserManagementPage> {
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
             ElevatedButton(
               onPressed: () async {
-                final updatedUser = UserModel(
-                  id: u.id, username: u.username, email: u.email, role: selectedRole, isVerified: u.isVerified
+                final updated = UserModel(
+                  id: u.id, username: u.username, email: u.email, 
+                  role: selectedRole, isVerified: u.isVerified, isBlocked: u.isBlocked
                 );
-                await _repo.update(updatedUser);
+                await _repo.update(updated);
                 if (mounted) Navigator.pop(ctx);
                 _load();
               },
@@ -101,5 +134,47 @@ class _UserManagementPageState extends State<UserManagementPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _toggleBlock(UserModel u) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Konfirmasi'),
+        content: Text('Yakin ingin ${u.isBlocked ? "membuka blokir" : "memblokir"} user ${u.username}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Ya')),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final updated = UserModel(
+        id: u.id, username: u.username, email: u.email, 
+        role: u.role, isVerified: u.isVerified, isBlocked: !u.isBlocked
+      );
+      await _repo.update(updated);
+      _load();
+    }
+  }
+
+  Future<void> _deleteUser(UserModel u) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Konfirmasi Hapus'),
+        content: Text('Yakin ingin menghapus user ${u.username}? Tindakan ini tidak bisa dibatalkan.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Hapus', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+
+    if (confirm == true && u.id != null) {
+      await _repo.delete(u.id!);
+      _load();
+    }
   }
 }

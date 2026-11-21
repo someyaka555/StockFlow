@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../core/theme.dart';
 import '../../providers/auth_provider.dart';
 import '../user/user_dashboard.dart';
+import '../shared/profile_page.dart';
 import 'user_management_page.dart';
 import 'settings_page.dart';
 
@@ -32,22 +33,27 @@ class AdminDashboard extends StatelessWidget {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Dashboard', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-              Text('Mode Admin', style: TextStyle(fontSize: 12, color: Colors.grey)),
-            ],
-          ),
+          title: const Text('Dashboard', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           actions: [
-            IconButton(
-              tooltip: 'Mode User',
-              icon: const Icon(Icons.swap_horiz),
-              onPressed: () => auth.toggleMode(),
-            ),
-            IconButton(
-              icon: const Icon(Icons.logout, color: Colors.red),
-              onPressed: () => auth.logout(),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) async {
+                if (value == 'profile') {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
+                } else if (value == 'logout') {
+                  auth.logout();
+                }
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                const PopupMenuItem<String>(
+                  value: 'profile', 
+                  child: ListTile(leading: Icon(Icons.person), title: Text('Profil'))
+                ),
+                const PopupMenuItem<String>(
+                  value: 'logout', 
+                  child: ListTile(leading: Icon(Icons.logout, color: Colors.red), title: Text('Logout', style: TextStyle(color: Colors.red)))
+                ),
+              ],
             ),
           ],
         ),
