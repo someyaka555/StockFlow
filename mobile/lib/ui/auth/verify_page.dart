@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/constants.dart'; // <-- Import constants
+import '../../core/constants.dart';
 import '../../providers/auth_provider.dart';
 
 class VerifyPage extends StatefulWidget {
@@ -26,14 +26,12 @@ class _VerifyPageState extends State<VerifyPage> {
               controller: _code, 
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
-                // Menampilkan teks hint berdasarkan constants
                 hintText: 'Masukkan kode (Tester: ${AppConstants.mockOtpCode})'
               )
             ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
-                // Pengecekan mengambil dari constants
                 if (_code.text == AppConstants.mockOtpCode) {
                   context.read<AuthProvider>().verifySuccess();
                 } else {

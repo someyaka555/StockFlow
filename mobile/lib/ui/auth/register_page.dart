@@ -33,7 +33,7 @@ class _RegisterPageState extends State<RegisterPage> {
         username: _username.text.trim(),
         email: _email.text.trim(),
         role: UserRole.user,
-        isVerified: false, // Set false agar masuk ke halaman verifikasi
+        isVerified: false,
       ));
       
       if (mounted) {
