@@ -1,3 +1,4 @@
+
 name: Build StockFlow APK
 
 on:
@@ -34,48 +35,33 @@ jobs:
       - name: Rename App to StockFlow
         working-directory: ./mobile/android
         run: |
-          # Ubah nama yang tampil di layar HP (AndroidManifest.xml)
           sed -i 's/android:label="stock_app"/android:label="StockFlow"/' app/src/main/AndroidManifest.xml
-          
-          # Ubah Application ID (agar unik dan tidak bentrok) di build.gradle
           sed -i 's/namespace "com.example.stock_app"/namespace "com.stockflow.app"/' app/build.gradle
           sed -i 's/applicationId "com.example.stock_app"/applicationId "com.stockflow.app"/' app/build.gradle
-          
-          # Hapus folder MainActivity lama dan buat yang baru sesuai ID baru
           rm -rf app/src/main/kotlin/com/example/stock_app
           mkdir -p app/src/main/kotlin/com/stockflow/app
-          
-          # Buat ulang file MainActivity.kt
           cat > app/src/main/kotlin/com/stockflow/app/MainActivity.kt << 'EOF'
           package com.stockflow.app
-
           import io.flutter.embedding.android.FlutterActivity
-
           class MainActivity: FlutterActivity() {
           }
           EOF
 
-      # 3. Timpa build.gradle dengan konfigurasi Release (yang LENGKAP)
+      # 3. Timpa build.gradle dengan konfigurasi Release
       - name: Inject Release Signing
         working-directory: ./mobile/android
         run: |
-          # Buat file keystore
           keytool -genkey -v -keystore app/release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias release -storepass password123 -keypass password123 -dname "CN=StockFlow, OU=Dev, O=StockFlow, L=City, S=State, C=ID"
-          
-          # Buat file key.properties
           echo "storePassword=password123" > key.properties
           echo "keyPassword=password123" >> key.properties
           echo "keyAlias=release" >> key.properties
           echo "storeFile=release-key.jks" >> key.properties
-          
-          # Timpa file app/build.gradle
           cat > app/build.gradle << 'EOF'
           plugins {
               id "com.android.application"
               id "kotlin-android"
               id "dev.flutter.flutter-gradle-plugin"
           }
-
           def localProperties = new Properties()
           def localPropertiesFile = rootProject.file('local.properties')
           if (localPropertiesFile.exists()) {
@@ -83,41 +69,33 @@ jobs:
                   localProperties.load(reader)
               }
           }
-
           def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
           if (flutterVersionCode == null) {
               flutterVersionCode = '1'
           }
-
           def flutterVersionName = localProperties.getProperty('flutter.versionName')
           if (flutterVersionName == null) {
               flutterVersionName = '1.0'
           }
-
           def keystoreProperties = new Properties()
           def keystorePropertiesFile = rootProject.file('key.properties')
           if (keystorePropertiesFile.exists()) {
               keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
           }
-
           android {
               namespace "com.stockflow.app"
               compileSdkVersion flutter.compileSdkVersion
               ndkVersion flutter.ndkVersion
-
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_1_8
                   targetCompatibility JavaVersion.VERSION_1_8
               }
-
               kotlinOptions {
                   jvmTarget = '1.8'
               }
-
               sourceSets {
                   main.java.srcDirs += 'src/main/kotlin'
               }
-
               defaultConfig {
                   applicationId "com.stockflow.app"
                   minSdkVersion flutter.minSdkVersion
@@ -125,7 +103,6 @@ jobs:
                   versionCode flutterVersionCode.toInteger()
                   versionName flutterVersionName
               }
-
               signingConfigs {
                   release {
                       keyAlias keystoreProperties['keyAlias']
@@ -134,7 +111,6 @@ jobs:
                       storePassword keystoreProperties['storePassword']
                   }
               }
-
               buildTypes {
                   release {
                       signingConfig signingConfigs.release
@@ -143,7 +119,6 @@ jobs:
                   }
               }
           }
-
           flutter {
               source '../..'
           }
@@ -153,19 +128,24 @@ jobs:
         working-directory: ./mobile
         run: flutter pub get
 
-      # 4. Build APK Debug & Release
-      - name: Build APK (Debug)
+      # 4. Cek Debug (Hanya untuk memastikan tidak ada error)
+      - name: Check Debug Build
         working-directory: ./mobile
         run: flutter build apk --debug
 
+      # 5. Hapus file Debug agar tidak masuk ke Artifacts (Menghemat ukuran)
+      - name: Remove Debug APK
+        working-directory: ./mobile
+        run: rm -f build/app/outputs/flutter-apk/app-debug.apk
+
+      # 6. Build Release (File final yang akan diunduh)
       - name: Build APK (Release)
         working-directory: ./mobile
         run: flutter build apk --release
 
-      - name: Upload APK (Debug & Release)
+      # 7. Upload HANYA file Release
+      - name: Upload APK (Release Only)
         uses: actions/upload-artifact@v4
         with:
-          name: StockFlow-APK-Builds
-          path: |
-            mobile/build/app/outputs/flutter-apk/app-debug.apk
-            mobile/build/app/outputs/flutter-apk/app-release.apk
+          name: StockFlow-Release-APK
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
