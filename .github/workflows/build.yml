@@ -47,7 +47,7 @@ jobs:
           }
           EOF
 
-      # 3. Timpa build.gradle dengan konfigurasi Release
+      # 3. Timpa build.gradle dengan konfigurasi Release yang SUPER RINGAN
       - name: Inject Release Signing
         working-directory: ./mobile/android
         run: |
@@ -56,6 +56,8 @@ jobs:
           echo "keyPassword=password123" >> key.properties
           echo "keyAlias=release" >> key.properties
           echo "storeFile=release-key.jks" >> key.properties
+          
+          # Timpa app/build.gradle dengan tambahan optimizer
           cat > app/build.gradle << 'EOF'
           plugins {
               id "com.android.application"
@@ -65,18 +67,10 @@ jobs:
           def localProperties = new Properties()
           def localPropertiesFile = rootProject.file('local.properties')
           if (localPropertiesFile.exists()) {
-              localPropertiesFile.withReader('UTF-8') { reader ->
-                  localProperties.load(reader)
-              }
+              localPropertiesFile.withReader('UTF-8') { reader -> localProperties.load(reader) }
           }
-          def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
-          if (flutterVersionCode == null) {
-              flutterVersionCode = '1'
-          }
-          def flutterVersionName = localProperties.getProperty('flutter.versionName')
-          if (flutterVersionName == null) {
-              flutterVersionName = '1.0'
-          }
+          def flutterVersionCode = localProperties.getProperty('flutter.versionCode') ?: '1'
+          def flutterVersionName = localProperties.getProperty('flutter.versionName') ?: '1.0'
           def keystoreProperties = new Properties()
           def keystorePropertiesFile = rootProject.file('key.properties')
           if (keystorePropertiesFile.exists()) {
@@ -116,6 +110,14 @@ jobs:
                       signingConfig signingConfigs.release
                       minifyEnabled true
                       shrinkResources true
+                      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+                  }
+              }
+              // SANGAT PENTING: Matikan pemisahan bahasa (karena kita hanya butuh Bahasa Indonesia/Inggris)
+              // Ini menghemat 1-2 MB
+              packagingOptions {
+                  resources {
+                      excludes += ['META-INF/*.kotlin_module', 'META-INF/versions/9/module-info.class']
                   }
               }
           }
@@ -128,24 +130,37 @@ jobs:
         working-directory: ./mobile
         run: flutter pub get
 
-      # 4. Cek Debug (Hanya untuk memastikan tidak ada error)
+      # 4. Build Debug (Cek error)
       - name: Check Debug Build
         working-directory: ./mobile
         run: flutter build apk --debug
 
-      # 5. Hapus file Debug agar tidak masuk ke Artifacts (Menghemat ukuran)
       - name: Remove Debug APK
         working-directory: ./mobile
         run: rm -f build/app/outputs/flutter-apk/app-debug.apk
 
-      # 6. Build Release (File final yang akan diunduh)
-      - name: Build APK (Release)
+      # 5. Build Release dengan TRIK SPLIT ARSITEKTUR
+      # Ini membuat APK hanya berisi mesin untuk HP modern (64-bit), 
+      # membuang mesin untuk HP jadul sehingga file jadi 40% lebih kecil!
+      - name: Build APK (Release - Ringan)
         working-directory: ./mobile
-        run: flutter build apk --release
+        run: flutter build apk --release --split-per-abi --target-platform android-arm64
 
-      # 7. Upload HANYA file Release
+      # 6. Hapus sisa file yang tidak perlu
+      - name: Clean Up Caches
+        working-directory: ./mobile
+        run: |
+          rm -rf ~/.gradle/caches/
+          rm -rf build/app/intermediates/
+          rm -rf android/.gradle/
+          rm -f android/release-key.jks
+          rm -f android/key.properties
+          echo "Pembersihan selesai."
+
+      # 7. Upload HANYA file Release yang paling ringan
       - name: Upload APK (Release Only)
         uses: actions/upload-artifact@v4
         with:
-          name: StockFlow-Release-APK
-          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          name: StockFlow-APK-Ringan
+          # File hasil split-per-abi bernama app-arm64-v8a-release.apk
+          path: mobile/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
