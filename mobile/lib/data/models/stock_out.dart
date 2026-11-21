@@ -4,7 +4,11 @@ class StockOutModel {
   final String clientNama;
   final String productId;
   final String productNama;
-  final int qty;
+  final String deskripsi;
+  final double kg;
+  final int pcs;
+  final double harga;
+  final double total;
   final String tanggal;
 
   StockOutModel({
@@ -12,15 +16,23 @@ class StockOutModel {
     required this.clientId,
     required this.clientNama,
     required this.productId,
-    this.productNama = '',
-    required this.qty,
+    required this.productNama,
+    this.deskripsi = '',
+    required this.kg,
+    required this.pcs,
+    required this.harga,
+    required this.total,
     required this.tanggal,
   });
 
   Map<String, dynamic> toJson() => {
         'client': clientId,
         'product': productId,
-        'qty': qty,
+        'deskripsi': deskripsi,
+        'kg': kg,
+        'pcs': pcs,
+        'harga': harga,
+        'total': total,
         'tanggal': tanggal,
       };
 
@@ -33,7 +45,11 @@ class StockOutModel {
       clientNama: c is Map ? (c['nama'] ?? '') : '',
       productId: p is Map ? p['_id'].toString() : p.toString(),
       productNama: p is Map ? (p['nama'] ?? '') : '',
-      qty: m['qty'] ?? 0,
+      deskripsi: m['deskripsi'] ?? '',
+      kg: (m['kg'] ?? 0.0).toDouble(),
+      pcs: m['pcs'] ?? 0,
+      harga: (m['harga'] ?? 0.0).toDouble(),
+      total: (m['total'] ?? 0.0).toDouble(),
       tanggal: m['tanggal'] ?? '',
     );
   }

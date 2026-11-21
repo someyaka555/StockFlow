@@ -7,6 +7,7 @@ class UserModel {
   final UserRole role;
   final bool active;
   final bool isVerified;
+  final bool isBlocked;
 
   UserModel({
     this.id,
@@ -15,6 +16,7 @@ class UserModel {
     required this.role,
     this.active = true,
     this.isVerified = false,
+    this.isBlocked = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -23,6 +25,7 @@ class UserModel {
         'role': role.name,
         'active': active,
         'isVerified': isVerified,
+        'isBlocked': isBlocked,
       };
 
   factory UserModel.fromJson(Map<String, dynamic> m) => UserModel(
@@ -35,5 +38,6 @@ class UserModel {
         ),
         active: m['active'] ?? true,
         isVerified: m['isVerified'] ?? false,
+        isBlocked: m['isBlocked'] ?? false,
       );
 }
