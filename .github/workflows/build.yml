@@ -30,7 +30,32 @@ jobs:
         working-directory: ./mobile
         run: flutter create . --project-name stock_app --platforms android
 
-      # 2. Timpa build.gradle dengan konfigurasi Release yang LENGKAP
+      # 2. Ubah Nama Aplikasi & Application ID
+      - name: Rename App to StockFlow
+        working-directory: ./mobile/android
+        run: |
+          # Ubah nama yang tampil di layar HP (AndroidManifest.xml)
+          sed -i 's/android:label="stock_app"/android:label="StockFlow"/' app/src/main/AndroidManifest.xml
+          
+          # Ubah Application ID (agar unik dan tidak bentrok) di build.gradle
+          sed -i 's/namespace "com.example.stock_app"/namespace "com.stockflow.app"/' app/build.gradle
+          sed -i 's/applicationId "com.example.stock_app"/applicationId "com.stockflow.app"/' app/build.gradle
+          
+          # Hapus folder MainActivity lama dan buat yang baru sesuai ID baru
+          rm -rf app/src/main/kotlin/com/example/stock_app
+          mkdir -p app/src/main/kotlin/com/stockflow/app
+          
+          # Buat ulang file MainActivity.kt
+          cat > app/src/main/kotlin/com/stockflow/app/MainActivity.kt << 'EOF'
+          package com.stockflow.app
+
+          import io.flutter.embedding.android.FlutterActivity
+
+          class MainActivity: FlutterActivity() {
+          }
+          EOF
+
+      # 3. Timpa build.gradle dengan konfigurasi Release (yang LENGKAP)
       - name: Inject Release Signing
         working-directory: ./mobile/android
         run: |
@@ -43,7 +68,7 @@ jobs:
           echo "keyAlias=release" >> key.properties
           echo "storeFile=release-key.jks" >> key.properties
           
-          # Timpa file app/build.gradle dengan konfigurasi yang 100% valid
+          # Timpa file app/build.gradle
           cat > app/build.gradle << 'EOF'
           plugins {
               id "com.android.application"
@@ -76,7 +101,7 @@ jobs:
           }
 
           android {
-              namespace "com.example.stock_app"
+              namespace "com.stockflow.app"
               compileSdkVersion flutter.compileSdkVersion
               ndkVersion flutter.ndkVersion
 
@@ -94,7 +119,7 @@ jobs:
               }
 
               defaultConfig {
-                  applicationId "com.example.stock_app"
+                  applicationId "com.stockflow.app"
                   minSdkVersion flutter.minSdkVersion
                   targetSdkVersion flutter.targetSdkVersion
                   versionCode flutterVersionCode.toInteger()
@@ -128,12 +153,19 @@ jobs:
         working-directory: ./mobile
         run: flutter pub get
 
+      # 4. Build APK Debug & Release
+      - name: Build APK (Debug)
+        working-directory: ./mobile
+        run: flutter build apk --debug
+
       - name: Build APK (Release)
         working-directory: ./mobile
         run: flutter build apk --release
 
-      - name: Upload APK
+      - name: Upload APK (Debug & Release)
         uses: actions/upload-artifact@v4
         with:
-          name: StockFlow-Release-APK
-          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          name: StockFlow-APK-Builds
+          path: |
+            mobile/build/app/outputs/flutter-apk/app-debug.apk
+            mobile/build/app/outputs/flutter-apk/app-release.apk
