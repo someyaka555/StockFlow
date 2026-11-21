@@ -47,7 +47,7 @@ jobs:
           }
           EOF
 
-      # 3. Timpa build.gradle dengan konfigurasi Release yang SUPER RINGAN
+      # 3. Timpa build.gradle dengan konfigurasi Release
       - name: Inject Release Signing
         working-directory: ./mobile/android
         run: |
@@ -56,8 +56,6 @@ jobs:
           echo "keyPassword=password123" >> key.properties
           echo "keyAlias=release" >> key.properties
           echo "storeFile=release-key.jks" >> key.properties
-          
-          # Timpa app/build.gradle dengan tambahan optimizer
           cat > app/build.gradle << 'EOF'
           plugins {
               id "com.android.application"
@@ -113,8 +111,6 @@ jobs:
                       proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
                   }
               }
-              // SANGAT PENTING: Matikan pemisahan bahasa (karena kita hanya butuh Bahasa Indonesia/Inggris)
-              // Ini menghemat 1-2 MB
               packagingOptions {
                   resources {
                       excludes += ['META-INF/*.kotlin_module', 'META-INF/versions/9/module-info.class']
@@ -126,27 +122,50 @@ jobs:
           }
           EOF
 
+      # 4. SETUP MAVEN MIRROR (Mengatasi Error 429)
+      - name: Setup Maven Mirror
+        working-directory: ./mobile/android
+        run: |
+          # Membuat file init.gradle untuk mengalihkan unduhan ke server mirror
+          cat > init.gradle << 'EOF'
+          allprojects {
+              buildscript {
+                  repositories {
+                      maven { url 'https://maven.aliyun.com/repository/public' }
+                      maven { url 'https://maven.aliyun.com/repository/google' }
+                      maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+                  }
+              }
+              repositories {
+                  maven { url 'https://maven.aliyun.com/repository/public' }
+                  maven { url 'https://maven.aliyun.com/repository/google' }
+              }
+          }
+          EOF
+          # Memberitahu Gradle untuk menggunakan file konfigurasi mirror tersebut
+          echo "org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8" > gradle.properties
+          echo "org.gradle.parallel=true" >> gradle.properties
+
       - name: Get Dependencies
         working-directory: ./mobile
         run: flutter pub get
 
-      # 4. Build Debug (Cek error)
+      # 5. Cek Debug (Pastikan tidak ada error)
       - name: Check Debug Build
         working-directory: ./mobile
-        run: flutter build apk --debug
+        run: flutter build apk --debug -Pandroid.initScript=android/init.gradle
 
+      # 6. Hapus file Debug
       - name: Remove Debug APK
         working-directory: ./mobile
         run: rm -f build/app/outputs/flutter-apk/app-debug.apk
 
-      # 5. Build Release dengan TRIK SPLIT ARSITEKTUR
-      # Ini membuat APK hanya berisi mesin untuk HP modern (64-bit), 
-      # membuang mesin untuk HP jadul sehingga file jadi 40% lebih kecil!
+      # 7. Build Release (Ukuran paling ringan)
       - name: Build APK (Release - Ringan)
         working-directory: ./mobile
-        run: flutter build apk --release --split-per-abi --target-platform android-arm64
+        run: flutter build apk --release --split-per-abi --target-platform android-arm64 -Pandroid.initScript=android/init.gradle
 
-      # 6. Hapus sisa file yang tidak perlu
+      # 8. Bersihkan Cache
       - name: Clean Up Caches
         working-directory: ./mobile
         run: |
@@ -157,10 +176,9 @@ jobs:
           rm -f android/key.properties
           echo "Pembersihan selesai."
 
-      # 7. Upload HANYA file Release yang paling ringan
+      # 9. Upload HANYA file Release
       - name: Upload APK (Release Only)
         uses: actions/upload-artifact@v4
         with:
           name: StockFlow-APK-Ringan
-          # File hasil split-per-abi bernama app-arm64-v8a-release.apk
           path: mobile/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
