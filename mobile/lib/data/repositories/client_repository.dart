@@ -4,8 +4,8 @@ import '../models/client.dart';
 
 class ClientRepository {
   static final List<ClientModel> _mockClients = [
-    ClientModel(id: 'c1', nama: 'Toko Berkah Jaya', kontak: '08123456789', alamat: 'Jakarta'),
-    ClientModel(id: 'c2', nama: 'Warung Sederhana', kontak: '08987654321', alamat: 'Bandung'),
+    ClientModel(id: 'c1', nama: 'Toko Berkah', kontak: '08123', alamat: 'Semarang', saldo: 500000),
+    ClientModel(id: 'c2', nama: 'Warung Jaya', kontak: '08987', alamat: 'Jakarta', saldo: 0),
   ];
 
   Future<List<ClientModel>> getAll() async {
@@ -17,10 +17,7 @@ class ClientRepository {
   Future<void> create(ClientModel client) async {
     if (!AppConstants.useApi) {
       _mockClients.add(ClientModel(
-        id: 'c${_mockClients.length + 1}',
-        nama: client.nama,
-        kontak: client.kontak,
-        alamat: client.alamat,
+        id: 'c${_mockClients.length + 1}', nama: client.nama, kontak: client.kontak, alamat: client.alamat, saldo: client.saldo,
       ));
       return;
     }
@@ -29,10 +26,8 @@ class ClientRepository {
 
   Future<void> update(ClientModel client) async {
     if (!AppConstants.useApi) {
-      final index = _mockClients.indexWhere((e) => e.id == client.id);
-      if (index >= 0) {
-        _mockClients[index] = client;
-      }
+      final i = _mockClients.indexWhere((e) => e.id == client.id);
+      if (i >= 0) _mockClients[i] = client;
       return;
     }
     await ApiClient().dio.put('/clients/${client.id}', data: client.toJson());

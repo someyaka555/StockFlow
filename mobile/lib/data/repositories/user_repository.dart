@@ -5,6 +5,7 @@ import '../models/user.dart';
 class UserRepository {
   static final List<UserModel> _mockUsers = [
     UserModel(id: 'mock-admin', username: 'Administrator', email: 'admin@stockflow.com', role: UserRole.admin, isVerified: true),
+    UserModel(id: 'mock-admin2', username: 'Admin Tester', email: 'admin2@stockflow.com', role: UserRole.admin, isVerified: true),
     UserModel(id: 'mock-user', username: 'User Satu', email: 'user1@stockflow.com', role: UserRole.user, isVerified: true),
   ];
 

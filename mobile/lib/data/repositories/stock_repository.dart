@@ -7,6 +7,7 @@ class StockRepository {
   static final List<StockInModel> _mockIn = [];
   static final List<StockOutModel> _mockOut = [];
 
+  // ============ BARANG MASUK ============
   Future<void> addStockIn(StockInModel s) async {
     if (!AppConstants.useApi) {
       _mockIn.insert(0, s);
@@ -28,14 +29,15 @@ class StockRepository {
       final filtered = _mockIn.where((e) => e.tanggal == date);
       final Map<String, int> grouped = {};
       for (final item in filtered) {
-        grouped[item.clientNama] = (grouped[item.clientNama] ?? 0) + item.qty;
+        grouped[item.asalBarang] = (grouped[item.asalBarang] ?? 0) + item.total;
       }
-      return grouped.entries.map((e) => {'client_nama': e.key, 'total': e.value}).toList();
+      return grouped.entries.map((e) => {'asal_barang': e.key, 'total': e.value}).toList();
     }
     final res = await ApiClient().dio.get('/stock/in/summary', queryParameters: {'tanggal': date});
-    return (res.data as List).map((e) => {'client_nama': e['clientNama'], 'total': e['total']}).toList();
+    return (res.data as List).map((e) => {'asal_barang': e['asalBarang'], 'total': e['total']}).toList();
   }
 
+  // ============ BARANG KELUAR ============
   Future<void> addStockOut(StockOutModel s) async {
     if (!AppConstants.useApi) {
       _mockOut.insert(0, s);
