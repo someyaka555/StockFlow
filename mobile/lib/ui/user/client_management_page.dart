@@ -30,101 +30,119 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Kelola Client (Pembeli)')),
+      appBar: AppBar(title: const Text('Kelola Client')),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddDialog,
+        onPressed: () => _showFormDialog(),
         icon: const Icon(Icons.add),
         label: const Text('Tambah Client'),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _items.isEmpty
-              ? const Center(child: Text('Belum ada data client'))
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _items.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (_, i) {
-                    final c = _items[i];
-                    return Card(
-                      child: ListTile(
-                        leading: const Icon(Icons.storefront),
-                        title: Text(c.nama),
-                        subtitle: Text('${c.alamat} • ${c.kontak}'),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit, color: Colors.blue),
-                              onPressed: () => _showEditDialog(c),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () async {
-                                if (c.id == null) return;
-                                await _repo.delete(c.id!);
-                                _load();
-                              },
-                            ),
-                          ],
+          : ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: _items.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (_, i) {
+                final c = _items[i];
+                return Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.storefront),
+                    title: Text(c.nama, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('${c.alamat} • ${c.kontak}\nSaldo: Rp ${c.saldo}'),
+                    isThreeLine: true,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.account_balance_wallet, color: Colors.green),
+                          onPressed: () => _showSaldoDialog(c),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.blue),
+                          onPressed: () => _showFormDialog(client: c),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 
-  Future<void> _showAddDialog() async {
-    final n = TextEditingController();
-    final a = TextEditingController();
-    final k = TextEditingController();
+  Future<void> _showSaldoDialog(ClientModel client) async {
+    final amount = TextEditingController();
+    bool isAddition = true;
 
     await showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Tambah Client'),
-        content: SingleChildScrollView(
-          child: Column(
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: Text('Saldo ${client.nama}'),
+          content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: n, decoration: const InputDecoration(labelText: 'Nama Client')),
-              const SizedBox(height: 12),
-              TextField(controller: a, decoration: const InputDecoration(labelText: 'Alamat')),
-              const SizedBox(height: 12),
-              TextField(controller: k, decoration: const InputDecoration(labelText: 'Kontak/No HP')),
+              Text('Saldo saat ini: Rp ${client.saldo}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: RadioListTile<bool>(
+                      title: const Text('Tambah'),
+                      value: true,
+                      groupValue: isAddition,
+                      onChanged: (v) => setS(() => isAddition = v!),
+                    ),
+                  ),
+                  Expanded(
+                    child: RadioListTile<bool>(
+                      title: const Text('Kurang'),
+                      value: false,
+                      groupValue: isAddition,
+                      onChanged: (v) => setS(() => isAddition = v!),
+                    ),
+                  ),
+                ],
+              ),
+              TextField(
+                controller: amount,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Nominal (Rp)'),
+              ),
             ],
           ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+            ElevatedButton(
+              onPressed: () async {
+                final val = double.tryParse(amount.text) ?? 0;
+                if (val <= 0) return;
+                
+                final newSaldo = isAddition ? (client.saldo + val) : (client.saldo - val);
+                final updated = ClientModel(
+                  id: client.id, nama: client.nama, kontak: client.kontak, alamat: client.alamat, saldo: newSaldo
+                );
+                await _repo.update(updated);
+                if (mounted) Navigator.pop(ctx);
+                _load();
+              },
+              child: const Text('Simpan'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () async {
-              if (n.text.isEmpty) return;
-              await _repo.create(ClientModel(
-                nama: n.text.trim(),
-                alamat: a.text.trim(),
-                kontak: k.text.trim(),
-              ));
-              if (mounted) Navigator.pop(context);
-              _load();
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
       ),
     );
   }
 
-  Future<void> _showEditDialog(ClientModel c) async {
-    final n = TextEditingController(text: c.nama);
-    final a = TextEditingController(text: c.alamat);
-    final k = TextEditingController(text: c.kontak);
+  Future<void> _showFormDialog({ClientModel? client}) async {
+    final n = TextEditingController(text: client?.nama ?? '');
+    final a = TextEditingController(text: client?.alamat ?? '');
+    final k = TextEditingController(text: client?.kontak ?? '');
 
     await showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Edit Client'),
+        title: Text(client == null ? 'Tambah Client' : 'Edit Client'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -142,16 +160,23 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
           ElevatedButton(
             onPressed: () async {
               if (n.text.isEmpty) return;
-              await _repo.update(ClientModel(
-                id: c.id,
+              final model = ClientModel(
+                id: client?.id,
                 nama: n.text.trim(),
                 alamat: a.text.trim(),
                 kontak: k.text.trim(),
-              ));
+                saldo: client?.saldo ?? 0.0,
+              );
+              
+              if (client == null) {
+                await _repo.create(model);
+              } else {
+                await _repo.update(model);
+              }
               if (mounted) Navigator.pop(context);
               _load();
             },
-            child: const Text('Simpan Perubahan'),
+            child: const Text('Simpan'),
           ),
         ],
       ),

@@ -3,11 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import '../../core/theme.dart';
 import '../../providers/auth_provider.dart';
+import '../shared/profile_page.dart';
 import 'stock_in_page.dart';
 import 'stock_out_page.dart';
 import 'product_management_page.dart';
 import 'client_management_page.dart';
-import 'user_settings_page.dart';
 
 class UserDashboard extends StatelessWidget {
   const UserDashboard({super.key});
@@ -34,27 +34,27 @@ class UserDashboard extends StatelessWidget {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Dashboard', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-              Text('Mode User', style: TextStyle(fontSize: 12, color: Colors.grey)),
-            ],
-          ),
+          title: const Text('Dashboard', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           actions: [
+            if (auth.isAdmin)
+              IconButton(
+                tooltip: 'Kembali ke Admin',
+                icon: const Icon(Icons.admin_panel_settings_outlined, color: Colors.blue),
+                onPressed: () => auth.toggleMode(),
+              ),
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert),
               onSelected: (value) async {
-                if (value == 'settings') {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const UserSettingsPage()));
+                if (value == 'profile') {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
                 } else if (value == 'logout') {
                   auth.logout();
                 }
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                 const PopupMenuItem<String>(
-                  value: 'settings', 
-                  child: ListTile(leading: Icon(Icons.lock_outline), title: Text('Ganti Sandi'))
+                  value: 'profile', 
+                  child: ListTile(leading: Icon(Icons.person), title: Text('Profil'))
                 ),
                 const PopupMenuItem<String>(
                   value: 'logout', 
@@ -84,7 +84,7 @@ class UserDashboard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(auth.user?.username ?? '-', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                            Text(auth.user?.email ?? '-', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                            Text(auth.user?.email ?? '-', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
                           ],
                         ),
                       ),

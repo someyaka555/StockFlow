@@ -34,19 +34,6 @@ class _StockOutPageState extends State<StockOutPage> {
     setState(() => _loading = false);
   }
 
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _date,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-    );
-    if (picked != null) {
-      _date = picked;
-      _load();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -62,32 +49,26 @@ class _StockOutPageState extends State<StockOutPage> {
           padding: const EdgeInsets.all(16),
           children: [
             OutlinedButton.icon(
-              onPressed: _pickDate,
+              onPressed: () async {
+                final p = await showDatePicker(context: context, initialDate: _date, firstDate: DateTime(2020), lastDate: DateTime(2100));
+                if (p != null) { _date = p; _load(); }
+              },
               icon: const Icon(Icons.calendar_today, size: 18),
               label: Text(DateFormat('EEEE, dd MMM yyyy').format(_date)),
             ),
             const SizedBox(height: 12),
             if (_loading)
-              const Padding(
-                padding: EdgeInsets.all(32),
-                child: Center(child: CircularProgressIndicator()),
-              )
+              const Center(child: CircularProgressIndicator())
             else if (_items.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(32),
-                child: Center(child: Text('Belum ada barang keluar')),
-              )
+              const Center(child: Text('Belum ada barang keluar'))
             else
               ..._items.map((it) => Card(
                     child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: AppTheme.danger.withOpacity(0.15),
-                        child: const Icon(Icons.call_made, color: AppTheme.danger),
-                      ),
+                      leading: const Icon(Icons.call_made, color: AppTheme.danger),
                       title: Text(it.productNama),
-                      subtitle: Text('Ke Client: ${it.clientNama}'),
-                      trailing: Text('-${it.qty}',
-                          style: const TextStyle(color: AppTheme.danger, fontWeight: FontWeight.bold)),
+                      subtitle: Text('Client: ${it.clientNama}\n${it.deskripsi} • ${it.kg} kg • ${it.pcs} pcs'),
+                      isThreeLine: true,
+                      trailing: Text('-Rp ${it.total}', style: const TextStyle(color: AppTheme.danger, fontWeight: FontWeight.bold)),
                     ),
                   )),
           ],
@@ -101,79 +82,89 @@ class _StockOutPageState extends State<StockOutPage> {
     final clients = await ClientRepository().getAll();
     if (!mounted) return;
     if (products.isEmpty || clients.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Produk/Client belum ada')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Produk/Client belum ada')));
       return;
     }
 
-    ProductModel? selProduct = products.first;
-    ClientModel? selClient = clients.first;
-    final qty = TextEditingController();
+    ProductModel? selProduct;
+    ClientModel? selClient;
+    final desc = TextEditingController();
+    final kg = TextEditingController();
+    final pcs = TextEditingController();
+    final harga = TextEditingController();
+    final total = TextEditingController();
 
     await showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Tambah Barang Keluar'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<ProductModel>(
-                value: selProduct,
-                decoration: const InputDecoration(labelText: 'Produk'),
-                items: products.map((p) => DropdownMenuItem(value: p, child: Text('${p.nama} (stok ${p.stokTotal})'))).toList(),
-                onChanged: (v) => selProduct = v,
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<ClientModel>(
-                value: selClient,
-                decoration: const InputDecoration(labelText: 'Ke Client'),
-                items: clients.map((c) => DropdownMenuItem(value: c, child: Text(c.nama))).toList(),
-                onChanged: (v) => selClient = v,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: qty,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Qty'),
-              ),
-            ],
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: const Text('Tambah Barang Keluar'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<ProductModel>(
+                  value: selProduct,
+                  decoration: const InputDecoration(labelText: 'Produk'),
+                  items: products.map((p) => DropdownMenuItem(value: p, child: Text(p.nama))).toList(),
+                  onChanged: (v) => setS(() { 
+                    selProduct = v; 
+                    desc.text = v?.deskripsi ?? ''; 
+                    kg.text = v?.kg.toString() ?? '';
+                    harga.text = v?.harga.toString() ?? '';
+                  }),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<ClientModel>(
+                  value: selClient,
+                  decoration: const InputDecoration(labelText: 'Ke Client'),
+                  items: clients.map((c) => DropdownMenuItem(value: c, child: Text(c.nama))).toList(),
+                  onChanged: (v) => selClient = v,
+                ),
+                const SizedBox(height: 12),
+                TextField(controller: desc, decoration: const InputDecoration(labelText: 'Deskripsi')),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(child: TextField(controller: kg, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Kg'))),
+                    const SizedBox(width: 8),
+                    Expanded(child: TextField(controller: pcs, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Pcs'))),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(controller: harga, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Harga')),
+                const SizedBox(height: 12),
+                TextField(controller: total, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Harga')),
+              ],
+            ),
           ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () async {
-              final q = int.tryParse(qty.text);
-              if (q == null || q <= 0) return;
-              if (q > selProduct!.stokTotal) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Stok tidak cukup (tersisa ${selProduct!.stokTotal})')),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+            ElevatedButton(
+              onPressed: () async {
+                final tot = double.tryParse(total.text);
+                if (selProduct == null || selClient == null || tot == null) return;
+                
+                final model = StockOutModel(
+                  clientId: selClient!.id!,
+                  clientNama: selClient!.nama,
+                  productId: selProduct!.id!,
+                  productNama: selProduct!.nama,
+                  deskripsi: desc.text,
+                  kg: double.tryParse(kg.text) ?? 0,
+                  pcs: int.tryParse(pcs.text) ?? 0,
+                  harga: double.tryParse(harga.text) ?? 0,
+                  total: tot,
+                  tanggal: DateFormat('yyyy-MM-dd').format(_date),
                 );
-                return;
-              }
-              final model = StockOutModel(
-                clientId: selClient!.id!,
-                clientNama: selClient!.nama,
-                productId: selProduct!.id!,
-                productNama: selProduct!.nama,
-                qty: q,
-                tanggal: DateFormat('yyyy-MM-dd').format(_date),
-              );
-              try {
                 await _repo.addStockOut(model);
-                if (mounted) Navigator.pop(context);
+                if (mounted) Navigator.pop(ctx);
                 _load();
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                }
-              }
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
+              },
+              child: const Text('Simpan'),
+            ),
+          ],
+        ),
       ),
     );
   }

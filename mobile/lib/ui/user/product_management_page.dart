@@ -32,7 +32,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Kelola Produk')),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAdd,
+        onPressed: () => _showFormDialog(),
         icon: const Icon(Icons.add),
         label: const Text('Tambah Produk'),
       ),
@@ -48,34 +48,31 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                     final p = _items[i];
                     return Card(
                       child: ListTile(
-                        title: Text(p.nama),
-                        subtitle: Text('${p.kode} • ${p.satuan} • stok ${p.stokTotal}'),
+                        title: Text(p.nama, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text('${p.deskripsi}\n${p.kg} kg / ${p.satuan} • Rp ${p.harga}'),
+                        isThreeLine: true,
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
                               icon: const Icon(Icons.edit, color: Colors.blue),
-                              onPressed: () => _showEditStock(p),
+                              onPressed: () => _showFormDialog(product: p),
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),
                               onPressed: () async {
-                                final ok = await showDialog<bool>(
+                                final confirm = await showDialog<bool>(
                                   context: context,
                                   builder: (_) => AlertDialog(
-                                    title: const Text('Hapus Produk'),
-                                    content: Text('Hapus ${p.nama}?'),
+                                    title: const Text('Konfirmasi Hapus'),
+                                    content: Text('Yakin ingin menghapus ${p.nama}?'),
                                     actions: [
-                                      TextButton(
-                                          onPressed: () => Navigator.pop(context, false),
-                                          child: const Text('Batal')),
-                                      TextButton(
-                                          onPressed: () => Navigator.pop(context, true),
-                                          child: const Text('Hapus')),
+                                      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+                                      TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Hapus')),
                                     ],
                                   ),
                                 );
-                                if (ok == true && p.id != null) {
+                                if (confirm == true && p.id != null) {
                                   await _repo.delete(p.id!);
                                   _load();
                                 }
@@ -90,82 +87,60 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
     );
   }
 
-  Future<void> _showAdd() async {
-    final n = TextEditingController();
-    final k = TextEditingController();
-    final s = TextEditingController(text: '0');
-    final sat = TextEditingController(text: 'pcs');
+  Future<void> _showFormDialog({ProductModel? product}) async {
+    final n = TextEditingController(text: product?.nama ?? '');
+    final d = TextEditingController(text: product?.deskripsi ?? '');
+    final kg = TextEditingController(text: product?.kg.toString() ?? '0');
+    final sat = TextEditingController(text: product?.satuan ?? 'pcs');
+    final h = TextEditingController(text: product?.harga.toString() ?? '0');
+    final s = TextEditingController(text: product?.stokTotal.toString() ?? '0');
 
     await showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Tambah Produk'),
+        title: Text(product == null ? 'Tambah Produk' : 'Edit Produk'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
-                  controller: n,
-                  decoration: const InputDecoration(labelText: 'Nama Produk')),
+              TextField(controller: n, decoration: const InputDecoration(labelText: 'Nama Produk')),
               const SizedBox(height: 12),
-              TextField(
-                  controller: k,
-                  decoration: const InputDecoration(labelText: 'Kode Produk')),
+              TextField(controller: d, decoration: const InputDecoration(labelText: 'Deskripsi')),
               const SizedBox(height: 12),
-              TextField(
-                  controller: s,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Stok Awal')),
+              Row(
+                children: [
+                  Expanded(child: TextField(controller: kg, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Berat (Kg)'))),
+                  const SizedBox(width: 8),
+                  Expanded(child: TextField(controller: sat, decoration: const InputDecoration(labelText: 'Satuan (pcs/sak)'))),
+                ],
+              ),
               const SizedBox(height: 12),
-              TextField(
-                  controller: sat,
-                  decoration: const InputDecoration(labelText: 'Satuan (pcs, box, dll)')),
+              TextField(controller: h, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Harga')),
+              const SizedBox(height: 12),
+              TextField(controller: s, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Stok Awal')),
             ],
           ),
         ),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
           ElevatedButton(
             onPressed: () async {
-              if (n.text.isEmpty || k.text.isEmpty) return;
-              await _repo.create(ProductModel(
+              if (n.text.isEmpty) return;
+              final model = ProductModel(
+                id: product?.id,
                 nama: n.text.trim(),
-                kode: k.text.trim(),
+                deskripsi: d.text.trim(),
+                kg: double.tryParse(kg.text) ?? 0,
+                satuan: sat.text.trim(),
+                harga: double.tryParse(h.text) ?? 0,
                 stokTotal: int.tryParse(s.text) ?? 0,
-                satuan: sat.text.trim().isEmpty ? 'pcs' : sat.text.trim(),
-              ));
-              if (mounted) Navigator.pop(context);
-              _load();
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showEditStock(ProductModel p) async {
-    final c = TextEditingController(text: p.stokTotal.toString());
-    await showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Ubah Stok ${p.nama}'),
-        content: TextField(
-          controller: c,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'Stok Total Baru'),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () async {
-              final v = int.tryParse(c.text);
-              if (v == null) return;
-              await _repo.updateStock(p.id!, v);
+              );
+              
+              if (product == null) {
+                await _repo.create(model);
+              } else {
+                await _repo.update(model);
+              }
               if (mounted) Navigator.pop(context);
               _load();
             },
