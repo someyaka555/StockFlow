@@ -28,10 +28,14 @@ class AuthProvider extends ChangeNotifier {
       final u = await _repo.login(email, password);
       if (u == null) return 'Email tidak terdaftar atau password salah';
       
+      // Pengecekan Blokir
+      if (u.isBlocked) {
+        return 'Akun Anda telah diblokir. Hubungi Admin.';
+      }
+      
       _user = u;
       _adminMode = u.role == UserRole.admin;
       
-      // Jika belum verifikasi, arahkan ke halaman verifikasi
       if (!u.isVerified) {
         _needsVerification = true;
       } else {
@@ -54,7 +58,8 @@ class AuthProvider extends ChangeNotifier {
         email: _user!.email, 
         role: _user!.role, 
         active: _user!.active, 
-        isVerified: true
+        isVerified: true,
+        isBlocked: _user!.isBlocked,
       );
       _repo.saveMockSession(_user!);
     }
