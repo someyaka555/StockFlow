@@ -1,4 +1,3 @@
-import '../../core/constants.dart';
 import '../api/api_client.dart';
 import '../models/stock_in.dart';
 import '../models/stock_out.dart';
@@ -9,7 +8,7 @@ class StockRepository {
 
   // ============ BARANG MASUK ============
   Future<void> addStockIn(StockInModel s) async {
-    if (!AppConstants.useApi) {
+    if (AppConstants.authMode == 'local') {
       _mockIn.insert(0, s);
       return;
     }
@@ -17,7 +16,7 @@ class StockRepository {
   }
 
   Future<List<StockInModel>> getStockInByDate(String date) async {
-    if (!AppConstants.useApi) {
+    if (AppConstants.authMode == 'local') {
       return _mockIn.where((e) => e.tanggal == date).toList();
     }
     final res = await ApiClient().dio.get('/stock/in', queryParameters: {'tanggal': date});
@@ -25,7 +24,7 @@ class StockRepository {
   }
 
   Future<List<Map<String, dynamic>>> getStockInSummaryByDate(String date) async {
-    if (!AppConstants.useApi) {
+    if (AppConstants.authMode == 'local') {
       final filtered = _mockIn.where((e) => e.tanggal == date);
       final Map<String, int> grouped = {};
       for (final item in filtered) {
@@ -39,7 +38,7 @@ class StockRepository {
 
   // ============ BARANG KELUAR ============
   Future<void> addStockOut(StockOutModel s) async {
-    if (!AppConstants.useApi) {
+    if (AppConstants.authMode == 'local') {
       _mockOut.insert(0, s);
       return;
     }
@@ -47,7 +46,7 @@ class StockRepository {
   }
 
   Future<List<StockOutModel>> getStockOutByDate(String date) async {
-    if (!AppConstants.useApi) {
+    if (AppConstants.authMode == 'local') {
       return _mockOut.where((e) => e.tanggal == date).toList();
     }
     final res = await ApiClient().dio.get('/stock/out', queryParameters: {'tanggal': date});

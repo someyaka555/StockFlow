@@ -1,4 +1,3 @@
-import '../../core/constants.dart';
 import '../api/api_client.dart';
 import '../models/client.dart';
 
@@ -9,13 +8,13 @@ class ClientRepository {
   ];
 
   Future<List<ClientModel>> getAll() async {
-    if (!AppConstants.useApi) return List.from(_mockClients);
+    if (AppConstants.authMode == 'local') return List.from(_mockClients);
     final res = await ApiClient().dio.get('/clients');
     return (res.data as List).map((e) => ClientModel.fromJson(e)).toList();
   }
 
   Future<void> create(ClientModel client) async {
-    if (!AppConstants.useApi) {
+    if (AppConstants.authMode == 'local') {
       _mockClients.add(ClientModel(
         id: 'c${_mockClients.length + 1}', nama: client.nama, kontak: client.kontak, alamat: client.alamat, saldo: client.saldo,
       ));
@@ -25,7 +24,7 @@ class ClientRepository {
   }
 
   Future<void> update(ClientModel client) async {
-    if (!AppConstants.useApi) {
+    if (AppConstants.authMode == 'local') {
       final i = _mockClients.indexWhere((e) => e.id == client.id);
       if (i >= 0) _mockClients[i] = client;
       return;
@@ -34,7 +33,7 @@ class ClientRepository {
   }
 
   Future<void> delete(String id) async {
-    if (!AppConstants.useApi) {
+    if (AppConstants.authMode == 'local') {
       _mockClients.removeWhere((e) => e.id == id);
       return;
     }

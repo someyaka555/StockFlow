@@ -1,4 +1,3 @@
-import '../../core/constants.dart';
 import '../api/api_client.dart';
 import '../models/product.dart';
 
@@ -9,13 +8,13 @@ class ProductRepository {
   ];
 
   Future<List<ProductModel>> getAll() async {
-    if (!AppConstants.useApi) return List.from(_mock);
+    if (AppConstants.authMode == 'local') return List.from(_mock);
     final res = await ApiClient().dio.get('/products');
     return (res.data as List).map((e) => ProductModel.fromJson(e)).toList();
   }
 
   Future<void> create(ProductModel p) async {
-    if (!AppConstants.useApi) {
+    if (AppConstants.authMode == 'local') {
       _mock.add(ProductModel(
         id: 'p${_mock.length + 1}', nama: p.nama, deskripsi: p.deskripsi, kg: p.kg, harga: p.harga, stokTotal: p.stokTotal,
       ));
@@ -25,7 +24,7 @@ class ProductRepository {
   }
 
   Future<void> update(ProductModel p) async {
-    if (!AppConstants.useApi) {
+    if (AppConstants.authMode == 'local') {
       final i = _mock.indexWhere((e) => e.id == p.id);
       if (i >= 0) _mock[i] = p;
       return;
@@ -34,7 +33,7 @@ class ProductRepository {
   }
 
   Future<void> delete(String id) async {
-    if (!AppConstants.useApi) {
+    if (AppConstants.authMode == 'local') {
       _mock.removeWhere((e) => e.id == id);
       return;
     }
