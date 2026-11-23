@@ -21,7 +21,7 @@ class AppTheme {
           elevation: 0,
           centerTitle: false,
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData( // <-- Diperbaiki dari CardTheme
           elevation: 1,
           color: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

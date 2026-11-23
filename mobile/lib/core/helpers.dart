@@ -39,9 +39,27 @@ class ThousandsFormatter extends TextInputFormatter {
     if (value == null) return oldValue;
 
     final String formatted = Helpers.formatNumber(value);
-    return newValue.copyWith(
+    
+    // Perbaikan: Menjaga posisi kursor agar tidak melompat ke akhir
+    int selectionIndex = newValue.selection.end;
+    int dotCountBefore = 0;
+    for (int i = 0; i < selectionIndex && i < newValue.text.length; i++) {
+      if (newValue.text[i] == '.') dotCountBefore++;
+    }
+    
+    int newDotCount = 0;
+    int finalSelection = 0;
+    for (int i = 0; i < formatted.length; i++) {
+      if (i - newDotCount == selectionIndex - dotCountBefore) {
+        finalSelection = i;
+      }
+      if (formatted[i] == '.') newDotCount++;
+    }
+    if (finalSelection == 0 && formatted.isNotEmpty) finalSelection = formatted.length;
+
+    return TextEditingValue(
       text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
+      selection: TextSelection.collapsed(offset: finalSelection),
     );
   }
 }
