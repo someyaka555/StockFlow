@@ -16,7 +16,7 @@ class StockFlowApp extends StatelessWidget {
       title: 'StockFlow',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: const AuthGate(), // Pindahkan logic ke widget terpisah
+      home: const AuthGate(),
     );
   }
 }
@@ -28,29 +28,12 @@ class AuthGate extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, auth, _) {
-        // 1. Loading State
         if (auth.loading) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
-        
-        // 2. Belum Login
-        if (!auth.isLoggedIn) {
-          return const LoginPage();
-        }
-        
-        // 3. Butuh Verifikasi
-        if (auth.needsVerification) {
-          return const VerifyPage();
-        }
-        
-        // 4. Admin Mode
-        if (auth.isAdmin && auth.adminMode) {
-          return const AdminDashboard();
-        }
-        
-        // 5. User Mode
+        if (!auth.isLoggedIn) return const LoginPage();
+        if (auth.needsVerification) return const VerifyPage();
+        if (auth.isAdmin && auth.adminMode) return const AdminDashboard();
         return const UserDashboard();
       },
     );

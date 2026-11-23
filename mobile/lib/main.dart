@@ -15,7 +15,6 @@ void main() {
         ChangeNotifierProxyProvider<SettingsProvider, AuthProvider>(
           create: (_) => AuthProvider(),
           update: (_, settings, auth) {
-            // Init hanya dipanggil sekali saat settings selesai load
             if (settings.isLoaded) {
               auth?.init();
             }
