@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/helpers.dart';
 import '../../data/models/product.dart';
 import '../../data/repositories/product_repository.dart';
 
@@ -21,13 +22,9 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
 
   Future<void> _load() async {
     setState(() => _loading = true);
-    try {
-      _items = await _repo.getAll();
-    } catch (_) {}
+    try { _items = await _repo.getAll(); } catch (_) {}
     setState(() => _loading = false);
   }
-
-  String _fmt(double val) => val == val.roundToDouble() ? val.toInt().toString() : val.toString();
 
   void _showNotif(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -35,13 +32,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
         content: Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
-        // PERBAIKAN: Hapus kata 'const' di sini
-        margin: EdgeInsets.only(
-          top: 20, 
-          left: 20, 
-          right: 20, 
-          bottom: MediaQuery.of(context).size.height - 120
-        ),
+        margin: EdgeInsets.only(top: 20, left: 20, right: 20, bottom: MediaQuery.of(context).size.height - 120),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
@@ -71,40 +62,45 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
-                        child: Column(
+                        child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text(p.nama, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                ),
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
-                                      onPressed: () => _showFormDialog(product: p),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                                      onPressed: () => _deleteProduct(p),
-                                    ),
-                                  ],
-                                )
-                              ],
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(p.nama, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                  const SizedBox(height: 4),
+                                  Text(p.deskripsi, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      _buildBadge('${Helpers.formatNumber(p.kg)} kg', Colors.orange),
+                                      const SizedBox(width: 8),
+                                      _buildBadge('Rp ${Helpers.formatNumber(p.harga)}', Colors.green),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
-                            Text(p.deskripsi, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-                            const SizedBox(height: 12),
-                            Row(
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                _buildBadge('${_fmt(p.kg)} kg', Colors.orange),
-                                const SizedBox(width: 8),
-                                _buildBadge('Rp ${_fmt(p.harga)}', Colors.green),
+                                PopupMenuButton<String>(
+                                  icon: const Icon(Icons.more_vert),
+                                  onSelected: (val) {
+                                    if (val == 'edit') _showFormDialog(product: p);
+                                    if (val == 'delete') _deleteProduct(p);
+                                  },
+                                  itemBuilder: (_) => [
+                                    const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                                    const PopupMenuItem(value: 'delete', child: Text('Hapus', style: TextStyle(color: Colors.red))),
+                                  ],
+                                ),
                                 const Spacer(),
                                 Text('Stok: ${p.stokTotal}', style: const TextStyle(fontWeight: FontWeight.bold)),
                               ],
-                            ),
+                            )
                           ],
                         ),
                       ),
@@ -117,11 +113,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
   Widget _buildBadge(String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.5)),
-      ),
+      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: color.withOpacity(0.5))),
       child: Text(text, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
     );
   }
@@ -148,8 +140,8 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
   Future<void> _showFormDialog({ProductModel? product}) async {
     final n = TextEditingController(text: product?.nama ?? '');
     final d = TextEditingController(text: product?.deskripsi ?? '');
-    final kg = TextEditingController(text: product != null ? _fmt(product.kg) : '');
-    final h = TextEditingController(text: product != null ? _fmt(product.harga) : '');
+    final kg = TextEditingController(text: product != null ? Helpers.formatNumber(product.kg) : '');
+    final h = TextEditingController(text: product != null ? Helpers.formatNumber(product.harga) : '');
     final s = TextEditingController(text: product?.stokTotal.toString() ?? '');
 
     await showDialog(
@@ -170,9 +162,19 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                 const SizedBox(height: 12),
                 TextField(controller: d, decoration: const InputDecoration(labelText: 'Deskripsi')),
                 const SizedBox(height: 12),
-                TextField(controller: kg, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Berat (Kg)')),
+                TextField(
+                  controller: kg, 
+                  keyboardType: TextInputType.number, 
+                  inputFormatters: [ThousandsFormatter()], 
+                  decoration: const InputDecoration(labelText: 'Berat (Kg)')
+                ),
                 const SizedBox(height: 12),
-                TextField(controller: h, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Harga (Rp)')),
+                TextField(
+                  controller: h, 
+                  keyboardType: TextInputType.number, 
+                  inputFormatters: [ThousandsFormatter()], 
+                  decoration: const InputDecoration(labelText: 'Harga (Rp)')
+                ),
                 const SizedBox(height: 12),
                 TextField(controller: s, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Stok Saat Ini')),
                 const SizedBox(height: 24),
@@ -185,18 +187,10 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                       onPressed: () async {
                         if (n.text.isEmpty) return;
                         final model = ProductModel(
-                          id: product?.id,
-                          nama: n.text.trim(),
-                          deskripsi: d.text.trim(),
-                          kg: double.tryParse(kg.text) ?? 0,
-                          harga: double.tryParse(h.text) ?? 0,
-                          stokTotal: int.tryParse(s.text) ?? 0,
+                          id: product?.id, nama: n.text.trim(), deskripsi: d.text.trim(),
+                          kg: Helpers.parseNumber(kg.text), harga: Helpers.parseNumber(h.text), stokTotal: int.tryParse(s.text) ?? 0,
                         );
-                        if (product == null) {
-                          await _repo.create(model);
-                        } else {
-                          await _repo.update(model);
-                        }
+                        if (product == null) { await _repo.create(model); } else { await _repo.update(model); }
                         if (mounted) Navigator.pop(context);
                         _load();
                         if (mounted) _showNotif('Produk berhasil disimpan');

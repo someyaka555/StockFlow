@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../core/helpers.dart';
 import '../../core/theme.dart';
 import '../../data/models/client.dart';
 import '../../data/models/product.dart';
@@ -28,13 +29,9 @@ class _StockOutPageState extends State<StockOutPage> {
 
   Future<void> _load() async {
     setState(() => _loading = true);
-    try {
-      _items = await _repo.getStockOutByDate(DateFormat('yyyy-MM-dd').format(_date));
-    } catch (_) {}
+    try { _items = await _repo.getStockOutByDate(DateFormat('yyyy-MM-dd').format(_date)); } catch (_) {}
     setState(() => _loading = false);
   }
-
-  String _fmt(double val) => val == val.roundToDouble() ? val.toInt().toString() : val.toString();
 
   void _showNotif(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -42,13 +39,7 @@ class _StockOutPageState extends State<StockOutPage> {
         content: Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
-        // PERBAIKAN: Hapus kata 'const' di sini
-        margin: EdgeInsets.only(
-          top: 20, 
-          left: 20, 
-          right: 20, 
-          bottom: MediaQuery.of(context).size.height - 120
-        ),
+        margin: EdgeInsets.only(top: 20, left: 20, right: 20, bottom: MediaQuery.of(context).size.height - 120),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
@@ -59,7 +50,7 @@ class _StockOutPageState extends State<StockOutPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Barang Keluar')),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddDialog,
+        onPressed: () => _showFormDialog(),
         icon: const Icon(Icons.add),
         label: const Text('Tambah'),
       ),
@@ -83,12 +74,45 @@ class _StockOutPageState extends State<StockOutPage> {
               const Center(child: Text('Belum ada barang keluar'))
             else
               ..._items.map((it) => Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.call_made, color: AppTheme.danger),
-                      title: Text(it.productNama),
-                      subtitle: Text('Client: ${it.clientNama}\n${it.deskripsi} • ${_fmt(it.kg)} kg • ${it.pcs} pcs'),
-                      isThreeLine: true,
-                      trailing: Text('-Rp ${_fmt(it.total)}', style: const TextStyle(color: AppTheme.danger, fontWeight: FontWeight.bold)),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(it.productNama, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                Text('Client: ${it.clientNama}', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    _buildBadge('${Helpers.formatNumber(it.kg)} kg', Colors.orange),
+                                    const SizedBox(width: 8),
+                                    _buildBadge('${it.pcs} pcs', Colors.blue),
+                                    const Spacer(),
+                                    Text('-Rp ${Helpers.formatNumber(it.total)}', style: const TextStyle(color: AppTheme.danger, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert),
+                            onSelected: (val) {
+                              if (val == 'edit') _showFormDialog(stockOut: it);
+                              if (val == 'delete') _deleteStockOut(it);
+                            },
+                            itemBuilder: (_) => [
+                              const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                              const PopupMenuItem(value: 'delete', child: Text('Hapus', style: TextStyle(color: Colors.red))),
+                            ],
+                          )
+                        ],
+                      ),
                     ),
                   )),
           ],
@@ -97,7 +121,34 @@ class _StockOutPageState extends State<StockOutPage> {
     );
   }
 
-  Future<void> _showAddDialog() async {
+  Widget _buildBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: color.withOpacity(0.5))),
+      child: Text(text, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Future<void> _deleteStockOut(StockOutModel s) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Konfirmasi Hapus'),
+        content: Text('Yakin ingin menghapus data keluar ini?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Hapus', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+    if (confirm == true && s.id != null) {
+      await _repo.deleteStockOut(s.id!);
+      _load();
+      if (mounted) _showNotif('Data berhasil dihapus');
+    }
+  }
+
+  Future<void> _showFormDialog({StockOutModel? stockOut}) async {
     final products = await ProductRepository().getAll();
     final clients = await ClientRepository().getAll();
     if (!mounted) return;
@@ -108,11 +159,11 @@ class _StockOutPageState extends State<StockOutPage> {
 
     ProductModel? selProduct;
     ClientModel? selClient;
-    final desc = TextEditingController();
-    final kg = TextEditingController();
-    final pcs = TextEditingController();
-    final harga = TextEditingController();
-    final total = TextEditingController();
+    final desc = TextEditingController(text: stockOut?.deskripsi ?? '');
+    final kg = TextEditingController(text: stockOut != null ? Helpers.formatNumber(stockOut.kg) : '');
+    final pcs = TextEditingController(text: stockOut?.pcs.toString() ?? '');
+    final harga = TextEditingController(text: stockOut != null ? Helpers.formatNumber(stockOut.harga) : '');
+    final total = TextEditingController(text: stockOut != null ? Helpers.formatNumber(stockOut.total) : '');
 
     await showDialog(
       context: context,
@@ -127,40 +178,45 @@ class _StockOutPageState extends State<StockOutPage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Tambah Barang Keluar', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  Text(stockOut == null ? 'Tambah Barang Keluar' : 'Edit Barang Keluar', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 20),
-                  DropdownButtonFormField<ProductModel>(
-                    value: selProduct,
-                    decoration: const InputDecoration(labelText: 'Produk'),
-                    items: products.map((p) => DropdownMenuItem(value: p, child: Text(p.nama))).toList(),
-                    onChanged: (v) => setS(() { 
-                      selProduct = v; 
-                      desc.text = v?.deskripsi ?? ''; 
-                      kg.text = v != null ? _fmt(v.kg) : '';
-                      harga.text = v != null ? _fmt(v.harga) : '';
+                  Autocomplete<ProductModel>(
+                    initialValue: TextEditingValue(text: stockOut?.productNama ?? ''),
+                    displayStringForOption: (p) => p.nama,
+                    optionsBuilder: (TextEditingValue text) {
+                      if (text.text.isEmpty) return products;
+                      return products.where((p) => p.nama.toLowerCase().contains(text.text.toLowerCase()));
+                    },
+                    onSelected: (p) => setS(() { 
+                      selProduct = p; desc.text = p.deskripsi; kg.text = Helpers.formatNumber(p.kg); harga.text = Helpers.formatNumber(p.harga);
                     }),
+                    fieldViewBuilder: (ctx, ctrl, fn, onSubmit) => TextField(controller: ctrl, focusNode: fn, decoration: const InputDecoration(labelText: 'Cari Produk')),
                   ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<ClientModel>(
-                    value: selClient,
-                    decoration: const InputDecoration(labelText: 'Ke Client'),
-                    items: clients.map((c) => DropdownMenuItem(value: c, child: Text(c.nama))).toList(),
-                    onChanged: (v) => setS(() => selClient = v),
+                  Autocomplete<ClientModel>(
+                    initialValue: TextEditingValue(text: stockOut?.clientNama ?? ''),
+                    displayStringForOption: (c) => c.nama,
+                    optionsBuilder: (TextEditingValue text) {
+                      if (text.text.isEmpty) return clients;
+                      return clients.where((c) => c.nama.toLowerCase().contains(text.text.toLowerCase()));
+                    },
+                    onSelected: (c) => setS(() => selClient = c),
+                    fieldViewBuilder: (ctx, ctrl, fn, onSubmit) => TextField(controller: ctrl, focusNode: fn, decoration: const InputDecoration(labelText: 'Cari Client')),
                   ),
                   const SizedBox(height: 12),
                   TextField(controller: desc, decoration: const InputDecoration(labelText: 'Deskripsi')),
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      Expanded(child: TextField(controller: kg, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Kg'))),
+                      Expanded(child: TextField(controller: kg, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'Kg'))),
                       const SizedBox(width: 8),
                       Expanded(child: TextField(controller: pcs, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Pcs'))),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  TextField(controller: harga, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Harga')),
+                  TextField(controller: harga, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'Harga')),
                   const SizedBox(height: 12),
-                  TextField(controller: total, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Harga')),
+                  TextField(controller: total, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'Total Harga')),
                   const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -169,17 +225,17 @@ class _StockOutPageState extends State<StockOutPage> {
                       const SizedBox(width: 8),
                       ElevatedButton(
                         onPressed: () async {
-                          final tot = double.tryParse(total.text);
-                          if (selProduct == null || selClient == null || tot == null) return;
+                          if (selProduct == null || selClient == null) return;
                           final model = StockOutModel(
-                            clientId: selClient!.id!, clientNama: selClient!.nama, productId: selProduct!.id!, productNama: selProduct!.nama,
-                            deskripsi: desc.text, kg: double.tryParse(kg.text) ?? 0, pcs: int.tryParse(pcs.text) ?? 0,
-                            harga: double.tryParse(harga.text) ?? 0, total: tot, tanggal: DateFormat('yyyy-MM-dd').format(_date),
+                            id: stockOut?.id, clientId: selClient!.id!, clientNama: selClient!.nama, 
+                            productId: selProduct!.id!, productNama: selProduct!.nama,
+                            deskripsi: desc.text, kg: Helpers.parseNumber(kg.text), pcs: int.tryParse(pcs.text) ?? 0,
+                            harga: Helpers.parseNumber(harga.text), total: Helpers.parseNumber(total.text), tanggal: DateFormat('yyyy-MM-dd').format(_date),
                           );
-                          await _repo.addStockOut(model);
+                          if (stockOut == null) { await _repo.addStockOut(model); } else { await _repo.updateStockOut(model); }
                           if (mounted) Navigator.pop(ctx);
                           _load();
-                          if (mounted) _showNotif('Barang keluar berhasil dicatat');
+                          if (mounted) _showNotif(stockOut == null ? 'Berhasil ditambah' : 'Berhasil diubah');
                         },
                         child: const Text('Simpan'),
                       ),

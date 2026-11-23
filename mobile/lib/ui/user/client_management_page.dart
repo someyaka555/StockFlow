@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/helpers.dart';
 import '../../data/models/client.dart';
 import '../../data/repositories/client_repository.dart';
 
@@ -21,13 +22,9 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
 
   Future<void> _load() async {
     setState(() => _loading = true);
-    try {
-      _items = await _repo.getAll();
-    } catch (_) {}
+    try { _items = await _repo.getAll(); } catch (_) {}
     setState(() => _loading = false);
   }
-
-  String _fmt(double val) => val == val.roundToDouble() ? val.toInt().toString() : val.toString();
 
   void _showNotif(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -35,13 +32,7 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
         content: Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
-        // PERBAIKAN: Hapus kata 'const' di sini
-        margin: EdgeInsets.only(
-          top: 20, 
-          left: 20, 
-          right: 20, 
-          bottom: MediaQuery.of(context).size.height - 120
-        ),
+        margin: EdgeInsets.only(top: 20, left: 20, right: 20, bottom: MediaQuery.of(context).size.height - 120),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
@@ -71,53 +62,42 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                CircleAvatar(
-                                  radius: 20,
-                                  backgroundColor: Colors.orange.withOpacity(0.1),
-                                  child: const Icon(Icons.storefront, color: Colors.orange),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(c.nama, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                      Text('${c.alamat} • ${c.kontak}', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                            // Ikon Toko Besar
+                            Container(
+                              width: 60, height: 60,
+                              decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), shape: BoxShape.circle),
+                              child: const Icon(Icons.storefront, color: Colors.orange, size: 32),
                             ),
-                            const SizedBox(height: 12),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.green.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8),
+                            const SizedBox(width: 16),
+                            // Info Client
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(c.nama, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                  Text('${c.alamat} • ${c.kontak}', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                                    child: Text('Saldo: Rp ${Helpers.formatNumber(c.saldo)}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
                                   ),
-                                  child: Text('Saldo: Rp ${_fmt(c.saldo)}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13)),
-                                ),
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.account_balance_wallet, color: Colors.green, size: 20),
-                                      onPressed: () => _showSaldoDialog(c),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
-                                      onPressed: () => _showFormDialog(client: c),
-                                    ),
-                                  ],
-                                ),
+                                ],
+                              ),
+                            ),
+                            // Tombol Titik 3
+                            PopupMenuButton<String>(
+                              icon: const Icon(Icons.more_vert),
+                              onSelected: (val) {
+                                if (val == 'saldo') _showSaldoDialog(c);
+                                if (val == 'edit') _showFormDialog(client: c);
+                              },
+                              itemBuilder: (_) => [
+                                const PopupMenuItem(value: 'saldo', child: Text('Ubah Saldo')),
+                                const PopupMenuItem(value: 'edit', child: Text('Edit Data')),
                               ],
                             )
                           ],
@@ -141,7 +121,7 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Saldo saat ini: Rp ${_fmt(client.saldo)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text('Saldo saat ini: Rp ${Helpers.formatNumber(client.saldo)}', style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               Row(
                 children: [
@@ -164,9 +144,10 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
               ),
               const SizedBox(height: 16),
               TextField(
-                controller: amount,
+                controller: amount, 
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Nominal (Rp)'),
+                inputFormatters: [ThousandsFormatter()],
+                decoration: const InputDecoration(labelText: 'Nominal (Rp)')
               ),
             ],
           ),
@@ -174,12 +155,10 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
             ElevatedButton(
               onPressed: () async {
-                final val = double.tryParse(amount.text) ?? 0;
+                final val = Helpers.parseNumber(amount.text);
                 if (val <= 0) return;
                 final newSaldo = isAddition ? (client.saldo + val) : (client.saldo - val);
-                final updated = ClientModel(
-                  id: client.id, nama: client.nama, kontak: client.kontak, alamat: client.alamat, saldo: newSaldo
-                );
+                final updated = ClientModel(id: client.id, nama: client.nama, kontak: client.kontak, alamat: client.alamat, saldo: newSaldo);
                 await _repo.update(updated);
                 if (mounted) Navigator.pop(ctx);
                 _load();
@@ -226,14 +205,8 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                     ElevatedButton(
                       onPressed: () async {
                         if (n.text.isEmpty) return;
-                        final model = ClientModel(
-                          id: client?.id, nama: n.text.trim(), alamat: a.text.trim(), kontak: k.text.trim(), saldo: client?.saldo ?? 0.0,
-                        );
-                        if (client == null) {
-                          await _repo.create(model);
-                        } else {
-                          await _repo.update(model);
-                        }
+                        final model = ClientModel(id: client?.id, nama: n.text.trim(), alamat: a.text.trim(), kontak: k.text.trim(), saldo: client?.saldo ?? 0.0);
+                        if (client == null) { await _repo.create(model); } else { await _repo.update(model); }
                         if (mounted) Navigator.pop(context);
                         _load();
                         if (mounted) _showNotif('Client berhasil disimpan');
