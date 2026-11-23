@@ -63,7 +63,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 const SizedBox(height: 24),
                 TextField(
                   controller: _username,
-                  decoration: const InputDecoration(hintText: 'Nama Lengkap', prefixIcon: Icon(Icons.person_outline)),
+                  decoration: const InputDecoration(hintText: 'Username', prefixIcon: Icon(Icons.person_outline)),
                 ),
                 const SizedBox(height: 14),
                 TextField(
