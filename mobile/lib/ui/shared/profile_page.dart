@@ -9,9 +9,20 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final _oldPass = TextEditingController();
   final _newPass = TextEditingController();
   final _confirmPass = TextEditingController();
+
+  void _showNotif(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.only(top: 20, left: 20, right: 20, bottom: MediaQuery.of(context).size.height - 120),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,62 +53,53 @@ class _ProfilePageState extends State<ProfilePage> {
                       backgroundColor: Colors.blue,
                       child: IconButton(
                         icon: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fitur upload foto (Simulasi)')));
-                        },
+                        onPressed: () => _showNotif('Fitur upload foto (Simulasi)'),
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
             
             // Read-Only Form
             _buildReadOnlyField('ID Account', user?.id ?? '-'),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             _buildReadOnlyField('Email', user?.email ?? '-'),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             _buildReadOnlyField('Username', cleanUsername),
             
-            const SizedBox(height: 32),
+            const SizedBox(height: 40),
             const Divider(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             
-            // Ganti Sandi
+            // Ganti Sandi (Hanya 2 Input)
             const Align(
               alignment: Alignment.centerLeft,
               child: Text('Ganti Sandi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _oldPass,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Change Password', prefixIcon: Icon(Icons.lock_outline)),
-            ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             TextField(
               controller: _newPass,
               obscureText: true,
               decoration: const InputDecoration(labelText: 'New Password', prefixIcon: Icon(Icons.lock_outline)),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             TextField(
               controller: _confirmPass,
               obscureText: true,
               decoration: const InputDecoration(labelText: 'Confirm Password', prefixIcon: Icon(Icons.lock_outline)),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
                   if (_newPass.text != _confirmPass.text) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sandi baru tidak cocok!')));
+                    _showNotif('Sandi baru tidak cocok!');
                     return;
                   }
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sandi berhasil diubah (Simulasi)')));
-                  _oldPass.clear();
+                  _showNotif('Sandi berhasil diubah (Simulasi)');
                   _newPass.clear();
                   _confirmPass.clear();
                 },
