@@ -39,8 +39,6 @@ class _StockOutPageState extends State<StockOutPage> {
         content: Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.only(top: 20, left: 20, right: 20, bottom: MediaQuery.of(context).size.height - 120),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -50,7 +48,7 @@ class _StockOutPageState extends State<StockOutPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Barang Keluar')),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showFormDialog(),
+        onPressed: () => _showFormBottomSheet(),
         icon: const Icon(Icons.add),
         label: const Text('Tambah'),
       ),
@@ -62,7 +60,7 @@ class _StockOutPageState extends State<StockOutPage> {
             OutlinedButton.icon(
               onPressed: () async {
                 final p = await showDatePicker(context: context, initialDate: _date, firstDate: DateTime(2020), lastDate: DateTime(2100));
-                if (p != null) { _date = p; _load(); }
+                if (p != null) { setState(() { _date = p; }); _load(); }
               },
               icon: const Icon(Icons.calendar_today, size: 18),
               label: Text(DateFormat('EEEE, dd MMM yyyy').format(_date)),
@@ -79,7 +77,7 @@ class _StockOutPageState extends State<StockOutPage> {
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Expanded(
                             child: Column(
@@ -91,24 +89,24 @@ class _StockOutPageState extends State<StockOutPage> {
                                 Row(
                                   children: [
                                     _buildBadge('${Helpers.formatNumber(it.kg)} kg', Colors.orange),
-                                    const SizedBox(width: 8),
-                                    _buildBadge('${it.pcs} pcs', Colors.blue),
                                     const Spacer(),
-                                    Text('-Rp ${Helpers.formatNumber(it.total)}', style: const TextStyle(color: AppTheme.danger, fontWeight: FontWeight.bold)),
+                                    Text('-Rp ${Helpers.formatNumber(it.total)} (${it.pcs} pcs)', style: const TextStyle(color: AppTheme.danger, fontWeight: FontWeight.bold, fontSize: 14)),
                                   ],
                                 ),
                               ],
                             ),
                           ),
-                          PopupMenuButton<String>(
-                            icon: const Icon(Icons.more_vert),
-                            onSelected: (val) {
-                              if (val == 'edit') _showFormDialog(stockOut: it);
-                              if (val == 'delete') _deleteStockOut(it);
-                            },
-                            itemBuilder: (_) => [
-                              const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                              const PopupMenuItem(value: 'delete', child: Text('Hapus', style: TextStyle(color: Colors.red))),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.blue, size: 28),
+                                onPressed: () => _showFormBottomSheet(stockOut: it),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red, size: 28),
+                                onPressed: () => _deleteStockOut(it),
+                              ),
                             ],
                           )
                         ],
@@ -148,7 +146,7 @@ class _StockOutPageState extends State<StockOutPage> {
     }
   }
 
-  Future<void> _showFormDialog({StockOutModel? stockOut}) async {
+  Future<void> _showFormBottomSheet({StockOutModel? stockOut}) async {
     final products = await ProductRepository().getAll();
     final clients = await ClientRepository().getAll();
     if (!mounted) return;
@@ -157,44 +155,52 @@ class _StockOutPageState extends State<StockOutPage> {
       return;
     }
 
-    ProductModel? selProduct;
-    ClientModel? selClient;
+    ProductModel? selProduct = stockOut != null ? products.firstWhere((p) => p.id == stockOut.productId, orElse: () => products.first) : null;
+    ClientModel? selClient = stockOut != null ? clients.firstWhere((c) => c.id == stockOut.clientId, orElse: () => clients.first) : null;
+    
     final desc = TextEditingController(text: stockOut?.deskripsi ?? '');
     final kg = TextEditingController(text: stockOut != null ? Helpers.formatNumber(stockOut.kg) : '');
     final pcs = TextEditingController(text: stockOut?.pcs.toString() ?? '');
     final harga = TextEditingController(text: stockOut != null ? Helpers.formatNumber(stockOut.harga) : '');
-    final total = TextEditingController(text: stockOut != null ? Helpers.formatNumber(stockOut.total) : '');
+    final ppn = TextEditingController(text: stockOut != null ? Helpers.formatNumber(stockOut.ppn) : '');
+    final restitusi = TextEditingController(text: stockOut != null ? Helpers.formatNumber(stockOut.restitusi) : '');
 
-    await showDialog(
+    await showModalBottomSheet(
       context: context,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 500),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: StatefulBuilder(
-              builder: (ctx, setS) => Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(stockOut == null ? 'Tambah Barang Keluar' : 'Edit Barang Keluar', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 20),
-                  Autocomplete<ProductModel>(
-                    initialValue: TextEditingValue(text: stockOut?.productNama ?? ''),
-                    displayStringForOption: (p) => p.nama,
-                    optionsBuilder: (TextEditingValue text) {
-                      if (text.text.isEmpty) return products;
-                      return products.where((p) => p.nama.toLowerCase().contains(text.text.toLowerCase()));
-                    },
-                    onSelected: (p) => setS(() { 
-                      selProduct = p; desc.text = p.deskripsi; kg.text = Helpers.formatNumber(p.kg); harga.text = Helpers.formatNumber(p.harga);
-                    }),
-                    fieldViewBuilder: (ctx, ctrl, fn, onSubmit) => TextField(controller: ctrl, focusNode: fn, decoration: const InputDecoration(labelText: 'Cari Produk')),
-                  ),
-                  const SizedBox(height: 12),
-                  Autocomplete<ClientModel>(
-                    initialValue: TextEditingValue(text: stockOut?.clientNama ?? ''),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: StatefulBuilder(
+            builder: (ctx, setS) => Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(stockOut == null ? 'Tambah Barang Keluar' : 'Edit Barang Keluar', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                const SizedBox(height: 20),
+                
+                DropdownButtonFormField<ProductModel>(
+                  decoration: const InputDecoration(labelText: 'Pilih Produk'),
+                  value: selProduct,
+                  items: products.map((p) => DropdownMenuItem(value: p, child: Text(p.nama))).toList(),
+                  onChanged: (p) {
+                    setS(() { 
+                      selProduct = p; 
+                      if (p != null) {
+                        desc.text = p.deskripsi; 
+                        kg.text = Helpers.formatNumber(p.kg); 
+                        harga.text = Helpers.formatNumber(p.harga);
+                      }
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                LayoutBuilder(
+                  builder: (context, constraints) => Autocomplete<ClientModel>(
+                    initialValue: TextEditingValue(text: selClient?.nama ?? ''),
                     displayStringForOption: (c) => c.nama,
                     optionsBuilder: (TextEditingValue text) {
                       if (text.text.isEmpty) return clients;
@@ -202,47 +208,103 @@ class _StockOutPageState extends State<StockOutPage> {
                     },
                     onSelected: (c) => setS(() => selClient = c),
                     fieldViewBuilder: (ctx, ctrl, fn, onSubmit) => TextField(controller: ctrl, focusNode: fn, decoration: const InputDecoration(labelText: 'Cari Client')),
+                    optionsViewBuilder: (context, onSelected, options) {
+                      return Align(
+                        alignment: Alignment.topLeft,
+                        child: Material(
+                          elevation: 4.0,
+                          borderRadius: BorderRadius.circular(12),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(maxHeight: 200, maxWidth: constraints.maxWidth),
+                            child: ListView.builder(
+                              padding: EdgeInsets.zero,
+                              shrinkWrap: true,
+                              itemCount: options.length,
+                              itemBuilder: (BuildContext context, int index) {
+                                final option = options.elementAt(index);
+                                return InkWell(
+                                  onTap: () => onSelected(option),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Text(option.nama),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                  const SizedBox(height: 12),
-                  TextField(controller: desc, decoration: const InputDecoration(labelText: 'Deskripsi')),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(child: TextField(controller: kg, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'Kg'))),
-                      const SizedBox(width: 8),
-                      Expanded(child: TextField(controller: pcs, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Pcs'))),
-                    ],
+                ),
+                const SizedBox(height: 12),
+                
+                TextField(controller: desc, decoration: const InputDecoration(labelText: 'Deskripsi')),
+                const SizedBox(height: 12),
+                
+                Row(
+                  children: [
+                    Expanded(child: TextField(controller: kg, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'Kg'))),
+                    const SizedBox(width: 8),
+                    Expanded(child: TextField(controller: pcs, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Pcs'), onChanged: (v) => setS(() {}))),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                
+                TextField(controller: harga, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'Harga'), onChanged: (v) => setS(() {})),
+                const SizedBox(height: 12),
+
+                Row(
+                  children: [
+                    Expanded(child: TextField(controller: ppn, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'PPN (Rp)'), onChanged: (v) => setS(() {}))),
+                    const SizedBox(width: 8),
+                    Expanded(child: TextField(controller: restitusi, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'Restitusi (Rp)'), onChanged: (v) => setS(() {}))),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                  child: Text(
+                    'Total Harga: Rp ${Helpers.formatNumber((int.tryParse(pcs.text) ?? 0) * Helpers.parseNumber(harga.text) + Helpers.parseNumber(ppn.text) - Helpers.parseNumber(restitusi.text))}',
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 12),
-                  TextField(controller: harga, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'Harga')),
-                  const SizedBox(height: 12),
-                  TextField(controller: total, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'Total Harga')),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () async {
-                          if (selProduct == null || selClient == null) return;
-                          final model = StockOutModel(
-                            id: stockOut?.id, clientId: selClient!.id!, clientNama: selClient!.nama, 
-                            productId: selProduct!.id!, productNama: selProduct!.nama,
-                            deskripsi: desc.text, kg: Helpers.parseNumber(kg.text), pcs: int.tryParse(pcs.text) ?? 0,
-                            harga: Helpers.parseNumber(harga.text), total: Helpers.parseNumber(total.text), tanggal: DateFormat('yyyy-MM-dd').format(_date),
-                          );
-                          if (stockOut == null) { await _repo.addStockOut(model); } else { await _repo.updateStockOut(model); }
-                          if (mounted) Navigator.pop(ctx);
-                          _load();
-                          if (mounted) _showNotif(stockOut == null ? 'Berhasil ditambah' : 'Berhasil diubah');
-                        },
-                        child: const Text('Simpan'),
-                      ),
-                    ],
-                  )
-                ],
-              ),
+                ),
+                const SizedBox(height: 24),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () async {
+                        if (selProduct == null || selClient == null) return;
+                        
+                        final finalPcs = int.tryParse(pcs.text) ?? 0;
+                        final finalHarga = Helpers.parseNumber(harga.text);
+                        final finalPpn = Helpers.parseNumber(ppn.text);
+                        final finalRestitusi = Helpers.parseNumber(restitusi.text);
+                        final finalTotal = (finalPcs * finalHarga) + finalPpn - finalRestitusi;
+
+                        final model = StockOutModel(
+                          id: stockOut?.id, clientId: selClient!.id!, clientNama: selClient!.nama, 
+                          productId: selProduct!.id!, productNama: selProduct!.nama,
+                          deskripsi: desc.text, kg: Helpers.parseNumber(kg.text), pcs: finalPcs,
+                          harga: finalHarga, ppn: finalPpn, restitusi: finalRestitusi, total: finalTotal, tanggal: DateFormat('yyyy-MM-dd').format(_date),
+                        );
+                        if (stockOut == null) { await _repo.addStockOut(model); } else { await _repo.updateStockOut(model); }
+                        if (mounted) Navigator.pop(ctx);
+                        _load();
+                        if (mounted) _showNotif(stockOut == null ? 'Berhasil ditambah' : 'Berhasil diubah');
+                      },
+                      child: const Text('Simpan'),
+                    ),
+                  ],
+                )
+              ],
             ),
           ),
         ),

@@ -32,8 +32,6 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
         content: Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.only(top: 20, left: 20, right: 20, bottom: MediaQuery.of(context).size.height - 120),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -63,7 +61,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Expanded(
                               child: Column(
@@ -73,32 +71,32 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                                   const SizedBox(height: 4),
                                   Text(p.deskripsi, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
                                   const SizedBox(height: 12),
-                                  Row(
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
                                     children: [
                                       _buildBadge('${Helpers.formatNumber(p.kg)} kg', Colors.orange),
-                                      const SizedBox(width: 8),
                                       _buildBadge('Rp ${Helpers.formatNumber(p.harga)}', Colors.green),
+                                      _buildBadge('Stok: ${p.stokTotal}', Colors.blue),
                                     ],
                                   ),
                                 ],
                               ),
                             ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
+                            // Tombol Aksi Langsung
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                PopupMenuButton<String>(
-                                  icon: const Icon(Icons.more_vert),
-                                  onSelected: (val) {
-                                    if (val == 'edit') _showFormDialog(product: p);
-                                    if (val == 'delete') _deleteProduct(p);
-                                  },
-                                  itemBuilder: (_) => [
-                                    const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                                    const PopupMenuItem(value: 'delete', child: Text('Hapus', style: TextStyle(color: Colors.red))),
-                                  ],
+                                IconButton(
+                                  icon: const Icon(Icons.edit, color: Colors.blue, size: 28),
+                                  onPressed: () => _showFormDialog(product: p),
+                                  tooltip: 'Edit',
                                 ),
-                                const Spacer(),
-                                Text('Stok: ${p.stokTotal}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.red, size: 28),
+                                  onPressed: () => _deleteProduct(p),
+                                  tooltip: 'Hapus',
+                                ),
                               ],
                             )
                           ],
@@ -150,31 +148,21 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 500),
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(product == null ? 'Tambah Produk' : 'Edit Produk', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Text(product == null ? 'Tambah Produk' : 'Edit Produk', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
                 const SizedBox(height: 20),
                 TextField(controller: n, decoration: const InputDecoration(labelText: 'Nama Produk')),
                 const SizedBox(height: 12),
                 TextField(controller: d, decoration: const InputDecoration(labelText: 'Deskripsi')),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: kg, 
-                  keyboardType: TextInputType.number, 
-                  inputFormatters: [ThousandsFormatter()], 
-                  decoration: const InputDecoration(labelText: 'Berat (Kg)')
-                ),
+                TextField(controller: kg, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'Berat (Kg)')),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: h, 
-                  keyboardType: TextInputType.number, 
-                  inputFormatters: [ThousandsFormatter()], 
-                  decoration: const InputDecoration(labelText: 'Harga (Rp)')
-                ),
+                TextField(controller: h, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'Harga (Rp)')),
                 const SizedBox(height: 12),
                 TextField(controller: s, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Stok Saat Ini')),
                 const SizedBox(height: 24),

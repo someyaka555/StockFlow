@@ -32,8 +32,6 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
         content: Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.only(top: 20, left: 20, right: 20, bottom: MediaQuery.of(context).size.height - 120),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -65,14 +63,12 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            // Ikon Toko Besar
                             Container(
                               width: 60, height: 60,
                               decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), shape: BoxShape.circle),
                               child: const Icon(Icons.storefront, color: Colors.orange, size: 32),
                             ),
                             const SizedBox(width: 16),
-                            // Info Client
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -88,16 +84,20 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                                 ],
                               ),
                             ),
-                            // Tombol Titik 3
-                            PopupMenuButton<String>(
-                              icon: const Icon(Icons.more_vert),
-                              onSelected: (val) {
-                                if (val == 'saldo') _showSaldoDialog(c);
-                                if (val == 'edit') _showFormDialog(client: c);
-                              },
-                              itemBuilder: (_) => [
-                                const PopupMenuItem(value: 'saldo', child: Text('Ubah Saldo')),
-                                const PopupMenuItem(value: 'edit', child: Text('Edit Data')),
+                            // Tombol Aksi Langsung
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.account_balance_wallet, color: Colors.green, size: 28),
+                                  onPressed: () => _showSaldoDialog(c),
+                                  tooltip: 'Ubah Saldo',
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.edit, color: Colors.blue, size: 28),
+                                  onPressed: () => _showFormDialog(client: c),
+                                  tooltip: 'Edit Data',
+                                ),
                               ],
                             )
                           ],
@@ -116,57 +116,71 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
     await showDialog(
       context: context,
       builder: (_) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
-          title: Text('Saldo ${client.nama}'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Saldo saat ini: Rp ${Helpers.formatNumber(client.saldo)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              Row(
+        builder: (ctx, setS) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: ChoiceChip(
-                      label: const Text('Tambah'),
-                      selected: isAddition,
-                      onSelected: (val) => setS(() => isAddition = true),
-                    ),
+                  Text('Saldo ${client.nama}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  Text('Saldo saat ini: Rp ${Helpers.formatNumber(client.saldo)}', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ChoiceChip(
+                          label: const Center(child: Text('Tambah')),
+                          selected: isAddition,
+                          onSelected: (val) => setS(() => isAddition = true),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ChoiceChip(
+                          label: const Center(child: Text('Kurang')),
+                          selected: !isAddition,
+                          onSelected: (val) => setS(() => isAddition = false),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ChoiceChip(
-                      label: const Text('Kurang'),
-                      selected: !isAddition,
-                      onSelected: (val) => setS(() => isAddition = false),
-                    ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: amount, 
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [ThousandsFormatter()],
+                    decoration: const InputDecoration(labelText: 'Nominal (Rp)')
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final val = Helpers.parseNumber(amount.text);
+                          if (val <= 0) return;
+                          final newSaldo = isAddition ? (client.saldo + val) : (client.saldo - val);
+                          final updated = ClientModel(id: client.id, nama: client.nama, kontak: client.kontak, alamat: client.alamat, saldo: newSaldo);
+                          await _repo.update(updated);
+                          if (mounted) Navigator.pop(ctx);
+                          _load();
+                          if (mounted) _showNotif('Saldo berhasil diperbarui');
+                        },
+                        child: const Text('Simpan'),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: amount, 
-                keyboardType: TextInputType.number,
-                inputFormatters: [ThousandsFormatter()],
-                decoration: const InputDecoration(labelText: 'Nominal (Rp)')
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-            ElevatedButton(
-              onPressed: () async {
-                final val = Helpers.parseNumber(amount.text);
-                if (val <= 0) return;
-                final newSaldo = isAddition ? (client.saldo + val) : (client.saldo - val);
-                final updated = ClientModel(id: client.id, nama: client.nama, kontak: client.kontak, alamat: client.alamat, saldo: newSaldo);
-                await _repo.update(updated);
-                if (mounted) Navigator.pop(ctx);
-                _load();
-                if (mounted) _showNotif('Saldo berhasil diperbarui');
-              },
-              child: const Text('Simpan'),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -183,13 +197,13 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 500),
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(client == null ? 'Tambah Client' : 'Edit Client', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Text(client == null ? 'Tambah Client' : 'Edit Client', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
                 const SizedBox(height: 20),
                 TextField(controller: n, decoration: const InputDecoration(labelText: 'Nama Client')),
                 const SizedBox(height: 12),
