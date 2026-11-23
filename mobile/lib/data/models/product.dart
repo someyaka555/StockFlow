@@ -3,7 +3,6 @@ class ProductModel {
   final String nama;
   final String deskripsi;
   final double kg;
-  final String satuan;
   final double harga;
   final int stokTotal;
 
@@ -12,7 +11,6 @@ class ProductModel {
     required this.nama,
     this.deskripsi = '',
     required this.kg,
-    required this.satuan,
     required this.harga,
     required this.stokTotal,
   });
@@ -21,7 +19,6 @@ class ProductModel {
         'nama': nama,
         'deskripsi': deskripsi,
         'kg': kg,
-        'satuan': satuan,
         'harga': harga,
         'stokTotal': stokTotal,
       };
@@ -31,7 +28,6 @@ class ProductModel {
         nama: m['nama'] ?? '',
         deskripsi: m['deskripsi'] ?? '',
         kg: (m['kg'] ?? 0.0).toDouble(),
-        satuan: m['satuan'] ?? 'pcs',
         harga: (m['harga'] ?? 0.0).toDouble(),
         stokTotal: m['stokTotal'] ?? 0,
       );
