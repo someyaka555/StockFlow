@@ -27,6 +27,8 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
     setState(() => _loading = false);
   }
 
+  String _fmt(double val) => val == val.roundToDouble() ? val.toInt().toString() : val.toString();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -48,7 +50,7 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                   child: ListTile(
                     leading: const Icon(Icons.storefront),
                     title: Text(c.nama, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('${c.alamat} • ${c.kontak}\nSaldo: Rp ${c.saldo}'),
+                    subtitle: Text('${c.alamat} • ${c.kontak}\nSaldo: Rp ${_fmt(c.saldo)}'),
                     isThreeLine: true,
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -82,7 +84,7 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Saldo saat ini: Rp ${client.saldo}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text('Saldo saat ini: Rp ${_fmt(client.saldo)}', style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               Row(
                 children: [

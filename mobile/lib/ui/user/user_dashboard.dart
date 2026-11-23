@@ -36,31 +36,44 @@ class UserDashboard extends StatelessWidget {
         appBar: AppBar(
           title: const Text('Dashboard', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           actions: [
+            // Tombol kembali ke mode admin (jika admin sedang nge-test mode user)
             if (auth.isAdmin)
               IconButton(
                 tooltip: 'Kembali ke Admin',
                 icon: const Icon(Icons.admin_panel_settings_outlined, color: Colors.blue),
                 onPressed: () => auth.toggleMode(),
               ),
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert),
-              onSelected: (value) async {
-                if (value == 'profile') {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
-                } else if (value == 'logout') {
-                  auth.logout();
-                }
+            // Ganti Titik 3 menjadi Ikon Profil
+            IconButton(
+              icon: const Icon(Icons.account_circle, size: 28),
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  builder: (ctx) => SafeArea(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.person),
+                          title: const Text('Profil'),
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.logout, color: Colors.red),
+                          title: const Text('Logout', style: TextStyle(color: Colors.red)),
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            auth.logout();
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                );
               },
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                const PopupMenuItem<String>(
-                  value: 'profile', 
-                  child: ListTile(leading: Icon(Icons.person), title: Text('Profil'))
-                ),
-                const PopupMenuItem<String>(
-                  value: 'logout', 
-                  child: ListTile(leading: Icon(Icons.logout, color: Colors.red), title: Text('Logout', style: TextStyle(color: Colors.red)))
-                ),
-              ],
             ),
           ],
         ),

@@ -32,6 +32,8 @@ class _StockInPageState extends State<StockInPage> {
     setState(() => _loading = false);
   }
 
+  String _fmt(double val) => val == val.roundToDouble() ? val.toInt().toString() : val.toString();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -64,7 +66,7 @@ class _StockInPageState extends State<StockInPage> {
                     child: ListTile(
                       leading: const Icon(Icons.call_received, color: AppTheme.success),
                       title: Text(it.productNama),
-                      subtitle: Text('Asal: ${it.asalBarang} • ${it.kg} kg'),
+                      subtitle: Text('Asal: ${it.asalBarang} • ${_fmt(it.kg)} kg'),
                       trailing: Text('+${it.total}', style: const TextStyle(color: AppTheme.success, fontWeight: FontWeight.bold)),
                     ),
                   )),
@@ -76,8 +78,7 @@ class _StockInPageState extends State<StockInPage> {
 
   Future<void> _showAddDialog() async {
     final products = await ProductRepository().getAll();
-    final historyIn = await _repo.getStockInByDate(''); // Ambil semua history (jika mock, ambil list)
-    // Kumpulkan asal barang unik
+    final historyIn = await _repo.getStockInByDate(''); 
     final uniqueAsal = historyIn.map((e) => e.asalBarang).toSet().toList();
     
     if (!mounted) return;
@@ -94,50 +95,78 @@ class _StockInPageState extends State<StockInPage> {
         builder: (ctx, setS) => AlertDialog(
           title: const Text('Tambah Barang Masuk'),
           content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Autocomplete Nama Produk
-                Autocomplete<ProductModel>(
-                  displayStringForOption: (p) => p.nama,
-                  optionsBuilder: (TextEditingValue text) {
-                    if (text.text.isEmpty) return products;
-                    return products.where((p) => p.nama.toLowerCase().contains(text.text.toLowerCase()));
-                  },
-                  onSelected: (p) {
-                    setS(() {
-                      selProduct = p;
-                      kg.text = p.kg.toString(); // Auto-fill kg
-                    });
-                  },
-                  fieldViewBuilder: (ctx, ctrl, fn, onSubmit) => TextField(
-                    controller: ctrl,
-                    focusNode: fn,
-                    decoration: const InputDecoration(labelText: 'Cari Nama Produk'),
+            child: SizedBox(
+              width: double.maxFinite, // Agar form mengikuti lebar layar
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LayoutBuilder( // Mengatur lebar dropdown autocomplete agar rapi
+                    builder: (context, constraints) {
+                      return Autocomplete<ProductModel>(
+                        displayStringForOption: (p) => p.nama,
+                        optionsBuilder: (TextEditingValue text) {
+                          if (text.text.isEmpty) return products;
+                          return products.where((p) => p.nama.toLowerCase().contains(text.text.toLowerCase()));
+                        },
+                        onSelected: (p) {
+                          setS(() {
+                            selProduct = p;
+                            kg.text = _fmt(p.kg); 
+                          });
+                        },
+                        fieldViewBuilder: (ctx, ctrl, fn, onSubmit) => TextField(
+                          controller: ctrl,
+                          focusNode: fn,
+                          decoration: const InputDecoration(labelText: 'Cari Nama Produk'),
+                        ),
+                        optionsViewBuilder: (ctx, onSelected, options) {
+                          return Align(
+                            alignment: Alignment.topLeft,
+                            child: Material(
+                              elevation: 4.0,
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(maxHeight: 200, maxWidth: constraints.maxWidth),
+                                child: ListView.builder(
+                                  padding: EdgeInsets.zero,
+                                  shrinkWrap: true,
+                                  itemCount: options.length,
+                                  itemBuilder: (context, index) {
+                                    final option = options.elementAt(index);
+                                    return InkWell(
+                                      onTap: () => onSelected(option),
+                                      child: ListTile(title: Text(option.nama)),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
-                ),
-                const SizedBox(height: 12),
-                // Autocomplete Asal Barang
-                Autocomplete<String>(
-                  optionsBuilder: (TextEditingValue text) {
-                    if (text.text.isEmpty) return uniqueAsal;
-                    return uniqueAsal.where((a) => a.toLowerCase().contains(text.text.toLowerCase()));
-                  },
-                  onSelected: (val) => selAsal = val,
-                  fieldViewBuilder: (ctx, ctrl, fn, onSubmit) => TextField(
-                    controller: ctrl,
-                    focusNode: fn,
-                    decoration: const InputDecoration(labelText: 'Asal Barang (Kota/Toko)'),
-                    onChanged: (val) => selAsal = val,
+                  const SizedBox(height: 12),
+                  Autocomplete<String>(
+                    optionsBuilder: (TextEditingValue text) {
+                      if (text.text.isEmpty) return uniqueAsal;
+                      return uniqueAsal.where((a) => a.toLowerCase().contains(text.text.toLowerCase()));
+                    },
+                    onSelected: (val) => selAsal = val,
+                    fieldViewBuilder: (ctx, ctrl, fn, onSubmit) => TextField(
+                      controller: ctrl,
+                      focusNode: fn,
+                      decoration: const InputDecoration(labelText: 'Asal Barang (Kota/Toko)'),
+                      onChanged: (val) => selAsal = val,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                TextField(controller: kg, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Berat (Kg)')),
-                const SizedBox(height: 12),
-                TextField(controller: total, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Item')),
-                const SizedBox(height: 12),
-                TextField(controller: catatan, decoration: const InputDecoration(labelText: 'Catatan (Opsional)')),
-              ],
+                  const SizedBox(height: 12),
+                  TextField(controller: kg, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Berat (Kg)')),
+                  const SizedBox(height: 12),
+                  TextField(controller: total, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Item')),
+                  const SizedBox(height: 12),
+                  TextField(controller: catatan, decoration: const InputDecoration(labelText: 'Catatan (Opsional)')),
+                ],
+              ),
             ),
           ),
           actions: [

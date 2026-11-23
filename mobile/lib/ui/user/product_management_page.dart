@@ -27,6 +27,9 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
     setState(() => _loading = false);
   }
 
+  // Helper format angka tanpa .0
+  String _fmt(double val) => val == val.roundToDouble() ? val.toInt().toString() : val.toString();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -49,7 +52,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                     return Card(
                       child: ListTile(
                         title: Text(p.nama, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('${p.deskripsi}\n${p.kg} kg / ${p.satuan} • Rp ${p.harga}'),
+                        subtitle: Text('${p.deskripsi}\n${_fmt(p.kg)} kg • Rp ${_fmt(p.harga)}'),
                         isThreeLine: true,
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -90,10 +93,9 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
   Future<void> _showFormDialog({ProductModel? product}) async {
     final n = TextEditingController(text: product?.nama ?? '');
     final d = TextEditingController(text: product?.deskripsi ?? '');
-    final kg = TextEditingController(text: product?.kg.toString() ?? '0');
-    final sat = TextEditingController(text: product?.satuan ?? 'pcs');
-    final h = TextEditingController(text: product?.harga.toString() ?? '0');
-    final s = TextEditingController(text: product?.stokTotal.toString() ?? '0');
+    final kg = TextEditingController(text: product != null ? _fmt(product.kg) : '');
+    final h = TextEditingController(text: product != null ? _fmt(product.harga) : '');
+    final s = TextEditingController(text: product?.stokTotal.toString() ?? '');
 
     await showDialog(
       context: context,
@@ -107,17 +109,11 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
               const SizedBox(height: 12),
               TextField(controller: d, decoration: const InputDecoration(labelText: 'Deskripsi')),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(child: TextField(controller: kg, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Berat (Kg)'))),
-                  const SizedBox(width: 8),
-                  Expanded(child: TextField(controller: sat, decoration: const InputDecoration(labelText: 'Satuan (pcs/sak)'))),
-                ],
-              ),
+              TextField(controller: kg, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Berat (Kg)')),
               const SizedBox(height: 12),
-              TextField(controller: h, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Harga')),
+              TextField(controller: h, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Harga (Rp)')),
               const SizedBox(height: 12),
-              TextField(controller: s, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Stok Awal')),
+              TextField(controller: s, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Stok/Total Produk Saat Ini')),
             ],
           ),
         ),
@@ -131,7 +127,6 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                 nama: n.text.trim(),
                 deskripsi: d.text.trim(),
                 kg: double.tryParse(kg.text) ?? 0,
-                satuan: sat.text.trim(),
                 harga: double.tryParse(h.text) ?? 0,
                 stokTotal: int.tryParse(s.text) ?? 0,
               );

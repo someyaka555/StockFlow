@@ -34,6 +34,8 @@ class _StockOutPageState extends State<StockOutPage> {
     setState(() => _loading = false);
   }
 
+  String _fmt(double val) => val == val.roundToDouble() ? val.toInt().toString() : val.toString();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -66,9 +68,9 @@ class _StockOutPageState extends State<StockOutPage> {
                     child: ListTile(
                       leading: const Icon(Icons.call_made, color: AppTheme.danger),
                       title: Text(it.productNama),
-                      subtitle: Text('Client: ${it.clientNama}\n${it.deskripsi} • ${it.kg} kg • ${it.pcs} pcs'),
+                      subtitle: Text('Client: ${it.clientNama}\n${it.deskripsi} • ${_fmt(it.kg)} kg • ${it.pcs} pcs'),
                       isThreeLine: true,
-                      trailing: Text('-Rp ${it.total}', style: const TextStyle(color: AppTheme.danger, fontWeight: FontWeight.bold)),
+                      trailing: Text('-Rp ${_fmt(it.total)}', style: const TextStyle(color: AppTheme.danger, fontWeight: FontWeight.bold)),
                     ),
                   )),
           ],
@@ -110,8 +112,8 @@ class _StockOutPageState extends State<StockOutPage> {
                   onChanged: (v) => setS(() { 
                     selProduct = v; 
                     desc.text = v?.deskripsi ?? ''; 
-                    kg.text = v?.kg.toString() ?? '';
-                    harga.text = v?.harga.toString() ?? '';
+                    kg.text = v != null ? _fmt(v.kg) : '';
+                    harga.text = v != null ? _fmt(v.harga) : '';
                   }),
                 ),
                 const SizedBox(height: 12),
