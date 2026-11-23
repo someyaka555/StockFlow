@@ -36,14 +36,12 @@ class UserDashboard extends StatelessWidget {
         appBar: AppBar(
           title: const Text('Dashboard', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           actions: [
-            // Tombol kembali ke mode admin (jika admin sedang nge-test mode user)
             if (auth.isAdmin)
               IconButton(
                 tooltip: 'Kembali ke Admin',
                 icon: const Icon(Icons.admin_panel_settings_outlined, color: Colors.blue),
                 onPressed: () => auth.toggleMode(),
               ),
-            // Ganti Titik 3 menjadi Ikon Profil
             IconButton(
               icon: const Icon(Icons.account_circle, size: 28),
               onPressed: () {
@@ -96,7 +94,7 @@ class UserDashboard extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(auth.user?.username ?? '-', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            Text(auth.user?.username.replaceAll(' ', '') ?? '-', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                             Text(auth.user?.email ?? '-', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
                           ],
                         ),

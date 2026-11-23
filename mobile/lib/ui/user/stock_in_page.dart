@@ -34,6 +34,18 @@ class _StockInPageState extends State<StockInPage> {
 
   String _fmt(double val) => val == val.roundToDouble() ? val.toInt().toString() : val.toString();
 
+  void _showNotif(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.only(top: 20, left: 20, right: 20, bottom: MediaQuery.of(context).size.height - 120),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -91,59 +103,32 @@ class _StockInPageState extends State<StockInPage> {
 
     await showDialog(
       context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
-          title: const Text('Tambah Barang Masuk'),
-          content: SingleChildScrollView(
-            child: SizedBox(
-              width: double.maxFinite, // Agar form mengikuti lebar layar
-              child: Column(
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 500),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: StatefulBuilder(
+              builder: (ctx, setS) => Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  LayoutBuilder( // Mengatur lebar dropdown autocomplete agar rapi
-                    builder: (context, constraints) {
-                      return Autocomplete<ProductModel>(
-                        displayStringForOption: (p) => p.nama,
-                        optionsBuilder: (TextEditingValue text) {
-                          if (text.text.isEmpty) return products;
-                          return products.where((p) => p.nama.toLowerCase().contains(text.text.toLowerCase()));
-                        },
-                        onSelected: (p) {
-                          setS(() {
-                            selProduct = p;
-                            kg.text = _fmt(p.kg); 
-                          });
-                        },
-                        fieldViewBuilder: (ctx, ctrl, fn, onSubmit) => TextField(
-                          controller: ctrl,
-                          focusNode: fn,
-                          decoration: const InputDecoration(labelText: 'Cari Nama Produk'),
-                        ),
-                        optionsViewBuilder: (ctx, onSelected, options) {
-                          return Align(
-                            alignment: Alignment.topLeft,
-                            child: Material(
-                              elevation: 4.0,
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(maxHeight: 200, maxWidth: constraints.maxWidth),
-                                child: ListView.builder(
-                                  padding: EdgeInsets.zero,
-                                  shrinkWrap: true,
-                                  itemCount: options.length,
-                                  itemBuilder: (context, index) {
-                                    final option = options.elementAt(index);
-                                    return InkWell(
-                                      onTap: () => onSelected(option),
-                                      child: ListTile(title: Text(option.nama)),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      );
+                  const Text('Tambah Barang Masuk', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 20),
+                  Autocomplete<ProductModel>(
+                    displayStringForOption: (p) => p.nama,
+                    optionsBuilder: (TextEditingValue text) {
+                      if (text.text.isEmpty) return products;
+                      return products.where((p) => p.nama.toLowerCase().contains(text.text.toLowerCase()));
                     },
+                    onSelected: (p) {
+                      setS(() { selProduct = p; kg.text = _fmt(p.kg); });
+                    },
+                    fieldViewBuilder: (ctx, ctrl, fn, onSubmit) => TextField(
+                      controller: ctrl, focusNode: fn,
+                      decoration: const InputDecoration(labelText: 'Cari Nama Produk'),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Autocomplete<String>(
@@ -153,8 +138,7 @@ class _StockInPageState extends State<StockInPage> {
                     },
                     onSelected: (val) => selAsal = val,
                     fieldViewBuilder: (ctx, ctrl, fn, onSubmit) => TextField(
-                      controller: ctrl,
-                      focusNode: fn,
+                      controller: ctrl, focusNode: fn,
                       decoration: const InputDecoration(labelText: 'Asal Barang (Kota/Toko)'),
                       onChanged: (val) => selAsal = val,
                     ),
@@ -165,33 +149,34 @@ class _StockInPageState extends State<StockInPage> {
                   TextField(controller: total, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Item')),
                   const SizedBox(height: 12),
                   TextField(controller: catatan, decoration: const InputDecoration(labelText: 'Catatan (Opsional)')),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final t = int.tryParse(total.text);
+                          if (selProduct == null || selAsal == null || t == null) return;
+                          final model = StockInModel(
+                            productId: selProduct!.id!, productNama: selProduct!.nama, asalBarang: selAsal!,
+                            kg: double.tryParse(kg.text) ?? 0, total: t,
+                            tanggal: DateFormat('yyyy-MM-dd').format(_date), catatan: catatan.text,
+                          );
+                          await _repo.addStockIn(model);
+                          if (mounted) Navigator.pop(ctx);
+                          _load();
+                          if (mounted) _showNotif('Barang masuk berhasil dicatat');
+                        },
+                        child: const Text('Simpan'),
+                      ),
+                    ],
+                  )
                 ],
               ),
             ),
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-            ElevatedButton(
-              onPressed: () async {
-                final t = int.tryParse(total.text);
-                if (selProduct == null || selAsal == null || t == null) return;
-                
-                final model = StockInModel(
-                  productId: selProduct!.id!,
-                  productNama: selProduct!.nama,
-                  asalBarang: selAsal!,
-                  kg: double.tryParse(kg.text) ?? 0,
-                  total: t,
-                  tanggal: DateFormat('yyyy-MM-dd').format(_date),
-                  catatan: catatan.text,
-                );
-                await _repo.addStockIn(model);
-                if (mounted) Navigator.pop(ctx);
-                _load();
-              },
-              child: const Text('Simpan'),
-            ),
-          ],
         ),
       ),
     );

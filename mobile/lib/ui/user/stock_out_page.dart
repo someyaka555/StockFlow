@@ -36,6 +36,18 @@ class _StockOutPageState extends State<StockOutPage> {
 
   String _fmt(double val) => val == val.roundToDouble() ? val.toInt().toString() : val.toString();
 
+  void _showNotif(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.only(top: 20, left: 20, right: 20, bottom: MediaQuery.of(context).size.height - 120),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -98,74 +110,79 @@ class _StockOutPageState extends State<StockOutPage> {
 
     await showDialog(
       context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
-          title: const Text('Tambah Barang Keluar'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<ProductModel>(
-                  value: selProduct,
-                  decoration: const InputDecoration(labelText: 'Produk'),
-                  items: products.map((p) => DropdownMenuItem(value: p, child: Text(p.nama))).toList(),
-                  onChanged: (v) => setS(() { 
-                    selProduct = v; 
-                    desc.text = v?.deskripsi ?? ''; 
-                    kg.text = v != null ? _fmt(v.kg) : '';
-                    harga.text = v != null ? _fmt(v.harga) : '';
-                  }),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<ClientModel>(
-                  value: selClient,
-                  decoration: const InputDecoration(labelText: 'Ke Client'),
-                  items: clients.map((c) => DropdownMenuItem(value: c, child: Text(c.nama))).toList(),
-                  onChanged: (v) => selClient = v,
-                ),
-                const SizedBox(height: 12),
-                TextField(controller: desc, decoration: const InputDecoration(labelText: 'Deskripsi')),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(child: TextField(controller: kg, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Kg'))),
-                    const SizedBox(width: 8),
-                    Expanded(child: TextField(controller: pcs, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Pcs'))),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                TextField(controller: harga, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Harga')),
-                const SizedBox(height: 12),
-                TextField(controller: total, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Harga')),
-              ],
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 500),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: StatefulBuilder(
+              builder: (ctx, setS) => Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Tambah Barang Keluar', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 20),
+                  DropdownButtonFormField<ProductModel>(
+                    value: selProduct,
+                    decoration: const InputDecoration(labelText: 'Produk'),
+                    items: products.map((p) => DropdownMenuItem(value: p, child: Text(p.nama))).toList(),
+                    onChanged: (v) => setS(() { 
+                      selProduct = v; 
+                      desc.text = v?.deskripsi ?? ''; 
+                      kg.text = v != null ? _fmt(v.kg) : '';
+                      harga.text = v != null ? _fmt(v.harga) : '';
+                    }),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<ClientModel>(
+                    value: selClient,
+                    decoration: const InputDecoration(labelText: 'Ke Client'),
+                    items: clients.map((c) => DropdownMenuItem(value: c, child: Text(c.nama))).toList(),
+                    onChanged: (v) => setS(() => selClient = v),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(controller: desc, decoration: const InputDecoration(labelText: 'Deskripsi')),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(child: TextField(controller: kg, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Kg'))),
+                      const SizedBox(width: 8),
+                      Expanded(child: TextField(controller: pcs, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Pcs'))),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(controller: harga, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Harga')),
+                  const SizedBox(height: 12),
+                  TextField(controller: total, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Harga')),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final tot = double.tryParse(total.text);
+                          if (selProduct == null || selClient == null || tot == null) return;
+                          final model = StockOutModel(
+                            clientId: selClient!.id!, clientNama: selClient!.nama, productId: selProduct!.id!, productNama: selProduct!.nama,
+                            deskripsi: desc.text, kg: double.tryParse(kg.text) ?? 0, pcs: int.tryParse(pcs.text) ?? 0,
+                            harga: double.tryParse(harga.text) ?? 0, total: tot, tanggal: DateFormat('yyyy-MM-dd').format(_date),
+                          );
+                          await _repo.addStockOut(model);
+                          if (mounted) Navigator.pop(ctx);
+                          _load();
+                          if (mounted) _showNotif('Barang keluar berhasil dicatat');
+                        },
+                        child: const Text('Simpan'),
+                      ),
+                    ],
+                  )
+                ],
+              ),
             ),
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-            ElevatedButton(
-              onPressed: () async {
-                final tot = double.tryParse(total.text);
-                if (selProduct == null || selClient == null || tot == null) return;
-                
-                final model = StockOutModel(
-                  clientId: selClient!.id!,
-                  clientNama: selClient!.nama,
-                  productId: selProduct!.id!,
-                  productNama: selProduct!.nama,
-                  deskripsi: desc.text,
-                  kg: double.tryParse(kg.text) ?? 0,
-                  pcs: int.tryParse(pcs.text) ?? 0,
-                  harga: double.tryParse(harga.text) ?? 0,
-                  total: tot,
-                  tanggal: DateFormat('yyyy-MM-dd').format(_date),
-                );
-                await _repo.addStockOut(model);
-                if (mounted) Navigator.pop(ctx);
-                _load();
-              },
-              child: const Text('Simpan'),
-            ),
-          ],
         ),
       ),
     );
