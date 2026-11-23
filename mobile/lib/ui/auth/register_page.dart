@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
+import '../../core/ui_helpers.dart';
 import '../../data/models/user.dart';
 import '../../data/repositories/user_repository.dart';
 import 'verify_page.dart';
@@ -37,9 +38,7 @@ class _RegisterPageState extends State<RegisterPage> {
       ));
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registrasi berhasil! Silakan verifikasi email.')),
-        );
+        AppSnackBar.success(context, 'Registrasi berhasil! Silakan verifikasi email.');
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const VerifyPage()));
       }
     } catch (e) {

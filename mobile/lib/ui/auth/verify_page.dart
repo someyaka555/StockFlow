@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/ui_helpers.dart';
 import '../../providers/auth_provider.dart';
 
 class VerifyPage extends StatefulWidget {
@@ -32,14 +33,14 @@ class _VerifyPageState extends State<VerifyPage> {
                 if (_code.text == '0000') {
                   context.read<AuthProvider>().verifySuccess();
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kode salah')));
+                  AppSnackBar.error(context, 'Kode salah');
                 }
               },
               child: const Text('Verifikasi'),
             ),
             TextButton(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kode baru telah dikirim (Tester: 0000)')));
+                AppSnackBar.success(context, 'Kode baru telah dikirim (Tester: 0000)');
               },
               child: const Text('Kirim Ulang Kode (Resend)'),
             )
