@@ -35,7 +35,13 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
         content: Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.only(top: 20, left: 20, right: 20, bottom: MediaQuery.of(context).size.height - 120),
+        // PERBAIKAN: Hapus kata 'const' di sini
+        margin: EdgeInsets.only(
+          top: 20, 
+          left: 20, 
+          right: 20, 
+          bottom: MediaQuery.of(context).size.height - 120
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
