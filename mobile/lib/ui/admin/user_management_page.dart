@@ -27,6 +27,18 @@ class _UserManagementPageState extends State<UserManagementPage> {
     setState(() => _loading = false);
   }
 
+  void _showNotif(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.only(top: 20, left: 20, right: 20, bottom: MediaQuery.of(context).size.height - 120),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -36,19 +48,24 @@ class _UserManagementPageState extends State<UserManagementPage> {
           : ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: _items.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (_, i) {
                 final u = _items[i];
                 return Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   child: ListTile(
                     leading: CircleAvatar(
                       backgroundColor: u.isBlocked ? Colors.red.withOpacity(0.2) : Colors.blue.withOpacity(0.2),
-                      child: Text(u.username.isNotEmpty ? u.username[0].toUpperCase() : '?'),
+                      child: Text(u.username.replaceAll(' ', '').isNotEmpty ? u.username.replaceAll(' ', '')[0].toUpperCase() : '?'),
                     ),
-                    title: Text(u.username, style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      decoration: u.isBlocked ? TextDecoration.lineThrough : null,
-                    )),
+                    title: Text(
+                      u.username.replaceAll(' ', ''), 
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        decoration: u.isBlocked ? TextDecoration.lineThrough : null,
+                      )
+                    ),
                     subtitle: Text('${u.email} • ${u.role.name}'),
                     trailing: PopupMenuButton<String>(
                       icon: const Icon(Icons.more_vert),
@@ -77,69 +94,81 @@ class _UserManagementPageState extends State<UserManagementPage> {
     await showDialog(
       context: context,
       builder: (_) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
-          title: const Text('Detail User', style: TextStyle(fontWeight: FontWeight.bold)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildDetailRow('ID Account', u.id ?? '-'),
-                const SizedBox(height: 12),
-                _buildDetailRow('Username', u.username),
-                const SizedBox(height: 12),
-                _buildDetailRow('Email', u.email),
-                const SizedBox(height: 12),
-                // Show/Hide Sandi
-                Row(
-                  children: [
-                    const Text('Sandi: ', style: TextStyle(color: Colors.grey)),
-                    const Expanded(child: Text('password123', style: TextStyle(fontWeight: FontWeight.w500))),
-                    IconButton(
-                      icon: Icon(isObscure ? Icons.visibility_off : Icons.visibility, size: 20),
-                      onPressed: () => setS(() => isObscure = !isObscure),
-                    ),
-                  ],
-                ),
-                const Divider(height: 24),
-                // Switch Blokir
-                SwitchListTile(
-                  title: const Text('Blokir User'),
-                  value: u.isBlocked,
-                  onChanged: (val) async {
-                    final updated = UserModel(
-                      id: u.id, username: u.username, email: u.email, 
-                      role: u.role, isVerified: u.isVerified, isBlocked: val
-                    );
-                    await _repo.update(updated);
-                    if (mounted) {
-                      Navigator.pop(ctx);
-                      _load();
-                    }
-                  },
-                ),
-                // Switch Role Admin
-                SwitchListTile(
-                  title: const Text('Jadikan Admin'),
-                  value: u.role == UserRole.admin,
-                  onChanged: (val) async {
-                    final updated = UserModel(
-                      id: u.id, username: u.username, email: u.email, 
-                      role: val ? UserRole.admin : UserRole.user, isVerified: u.isVerified, isBlocked: u.isBlocked
-                    );
-                    await _repo.update(updated);
-                    if (mounted) {
-                      Navigator.pop(ctx);
-                      _load();
-                    }
-                  },
-                ),
-              ],
+        builder: (ctx, setS) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Detail User', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 20),
+                  _buildDetailRow('ID Account', u.id ?? '-'),
+                  const SizedBox(height: 12),
+                  _buildDetailRow('Username', u.username.replaceAll(' ', '')),
+                  const SizedBox(height: 12),
+                  _buildDetailRow('Email', u.email),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Text('Sandi: ', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      Expanded(
+                        child: Text(
+                          isObscure ? '••••••••' : 'password123',
+                          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(isObscure ? Icons.visibility_off : Icons.visibility, size: 20),
+                        onPressed: () => setS(() => isObscure = !isObscure),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 24),
+                  SwitchListTile(
+                    title: const Text('Blokir User', style: TextStyle(fontSize: 14)),
+                    value: u.isBlocked,
+                    onChanged: (val) async {
+                      final updated = UserModel(
+                        id: u.id, username: u.username, email: u.email, 
+                        role: u.role, isVerified: u.isVerified, isBlocked: val
+                      );
+                      await _repo.update(updated);
+                      if (mounted) {
+                        Navigator.pop(ctx);
+                        _load();
+                        _showNotif(val ? 'User diblokir' : 'Blokir dibuka');
+                      }
+                    },
+                  ),
+                  SwitchListTile(
+                    title: const Text('Jadikan Admin', style: TextStyle(fontSize: 14)),
+                    value: u.role == UserRole.admin,
+                    onChanged: (val) async {
+                      final updated = UserModel(
+                        id: u.id, username: u.username, email: u.email, 
+                        role: val ? UserRole.admin : UserRole.user, isVerified: u.isVerified, isBlocked: u.isBlocked
+                      );
+                      await _repo.update(updated);
+                      if (mounted) {
+                        Navigator.pop(ctx);
+                        _load();
+                        _showNotif(val ? 'Jadi Admin' : 'Jadi User');
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+                  ),
+                ],
+              ),
             ),
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
-          ],
         ),
       ),
     );
@@ -171,6 +200,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
     if (confirm == true && u.id != null) {
       await _repo.delete(u.id!);
       _load();
+      if (mounted) _showNotif('User berhasil dihapus');
     }
   }
 }

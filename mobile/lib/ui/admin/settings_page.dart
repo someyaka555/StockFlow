@@ -10,14 +10,12 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   late TextEditingController _url;
-  bool _useApi = false;
 
   @override
   void initState() {
     super.initState();
     final s = context.read<SettingsProvider>();
     _url = TextEditingController(text: s.baseUrl);
-    _useApi = s.useApi;
   }
 
   @override
@@ -38,21 +36,20 @@ class _SettingsPageState extends State<SettingsPage> {
               child: Text('Tips: emulator Android pakai 10.0.2.2, HP fisik pakai IP LAN server', style: TextStyle(color: Colors.grey, fontSize: 12)),
             ),
             const SizedBox(height: 16),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Gunakan API Server'),
-              subtitle: const Text('Matikan untuk mode tester (mock lokal)'),
-              value: _useApi,
-              onChanged: (v) => setState(() => _useApi = v),
-            ),
-            const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () async {
-                  await context.read<SettingsProvider>().save(_url.text.trim(), _useApi);
+                  await context.read<SettingsProvider>().save(_url.text.trim());
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pengaturan disimpan')));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Pengaturan API disimpan', textAlign: TextAlign.center, style: TextStyle(color: Colors.white)),
+                        backgroundColor: Colors.green,
+                        behavior: SnackBarBehavior.floating,
+                        margin: EdgeInsets.only(top: 20, left: 20, right: 20, bottom: 0),
+                      ),
+                    );
                   }
                 },
                 child: const Text('Simpan'),

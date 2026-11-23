@@ -35,13 +35,11 @@ class AdminDashboard extends StatelessWidget {
         appBar: AppBar(
           title: const Text('Dashboard', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           actions: [
-            // Tombol Switch Mode pindah ke sini
             IconButton(
               tooltip: 'Mode User',
               icon: const Icon(Icons.swap_horiz, color: Colors.blue),
               onPressed: () => auth.toggleMode(),
             ),
-            // Ikon Profil (Ganti Titik 3)
             IconButton(
               icon: const Icon(Icons.account_circle, size: 28),
               onPressed: () {
@@ -94,7 +92,7 @@ class AdminDashboard extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Halo, ${auth.user?.username ?? '-'}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                            Text('Halo, ${auth.user?.username.replaceAll(' ', '') ?? '-'}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                             const Text('Administrator', style: TextStyle(color: Colors.white70, fontSize: 12)),
                           ],
                         ),
