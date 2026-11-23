@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../core/helpers.dart';
+import '../../core/ui_helpers.dart';
 import '../../data/models/product.dart';
 import '../../data/models/stock_in.dart';
 import '../../data/repositories/product_repository.dart';
@@ -30,16 +31,6 @@ class _StockInPageState extends State<StockInPage> {
     setState(() => _loading = false);
   }
 
-  void _showNotif(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -47,7 +38,7 @@ class _StockInPageState extends State<StockInPage> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showFormBottomSheet(),
         icon: const Icon(Icons.add),
-        label: const Text('Tambah'),
+        label: const Text('Tambah Nota'),
       ),
       body: RefreshIndicator(
         onRefresh: _load,
@@ -73,39 +64,48 @@ class _StockInPageState extends State<StockInPage> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text('Asal: ${it.asalBarang}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit, color: Colors.blue, size: 24),
+                                    onPressed: () => _showFormBottomSheet(stockIn: it),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, color: Colors.red, size: 24),
+                                    onPressed: () => _deleteStockIn(it),
+                                  ),
+                                ],
+                              )
+                            ],
+                          ),
+                          const Divider(),
+                          // List Item Produk dalam nota
+                          ...it.items.map((item) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(it.productNama, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                Text('Asal: ${it.asalBarang}', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-                                const SizedBox(height: 8),
+                                Text(item.productNama, style: const TextStyle(fontWeight: FontWeight.w500)),
                                 Row(
                                   children: [
-                                    _buildBadge('${Helpers.formatNumber(it.kg)} kg', Colors.orange),
+                                    _buildBadge('${Helpers.formatNumber(item.kg)} kg', Colors.orange),
                                     const SizedBox(width: 8),
-                                    _buildBadge('+${it.total} item', Colors.green),
+                                    _buildBadge('+${item.total} item', Colors.green),
                                   ],
-                                ),
+                                )
                               ],
                             ),
-                          ),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit, color: Colors.blue, size: 28),
-                                onPressed: () => _showFormBottomSheet(stockIn: it),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red, size: 28),
-                                onPressed: () => _deleteStockIn(it),
-                              ),
-                            ],
-                          )
+                          )),
                         ],
                       ),
                     ),
@@ -129,7 +129,7 @@ class _StockInPageState extends State<StockInPage> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Konfirmasi Hapus'),
-        content: Text('Yakin ingin menghapus data masuk ini?'),
+        content: Text('Yakin ingin menghapus nota ini? Stok produk akan dikembalikan.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
           TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Hapus', style: TextStyle(color: Colors.red))),
@@ -139,7 +139,7 @@ class _StockInPageState extends State<StockInPage> {
     if (confirm == true && s.id != null) {
       await _repo.deleteStockIn(s.id!);
       _load();
-      if (mounted) _showNotif('Data berhasil dihapus');
+      if (mounted) AppSnackBar.success(context, 'Nota berhasil dihapus');
     }
   }
 
@@ -150,11 +150,16 @@ class _StockInPageState extends State<StockInPage> {
     final uniqueAsal = allHistory.map((e) => e.asalBarang).where((e) => e.isNotEmpty).toSet().toList();
     
     if (!mounted) return;
+    if (products.isEmpty) {
+      AppSnackBar.error(context, 'Belum ada produk. Tambah produk terlebih dahulu.');
+      return;
+    }
 
-    ProductModel? selProduct;
+    // Inisialisasi List Keranjang jika Edit, atau Kosong jika Baru
+    List<StockInItem> cartItems = stockIn != null ? List.from(stockIn.items) : [];
+    
+    // Controller Global
     String? selAsal = stockIn?.asalBarang;
-    final kg = TextEditingController(text: stockIn != null ? Helpers.formatNumber(stockIn.kg) : '');
-    final total = TextEditingController(text: stockIn?.total.toString() ?? '');
     final catatan = TextEditingController(text: stockIn?.catatan ?? '');
 
     await showModalBottomSheet(
@@ -162,7 +167,7 @@ class _StockInPageState extends State<StockInPage> {
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom), // Anti Keyboard
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: StatefulBuilder(
@@ -173,52 +178,6 @@ class _StockInPageState extends State<StockInPage> {
                 Text(stockIn == null ? 'Tambah Barang Masuk' : 'Edit Barang Masuk', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
                 const SizedBox(height: 20),
                 
-                LayoutBuilder(
-                  builder: (context, constraints) => Autocomplete<ProductModel>(
-                    initialValue: TextEditingValue(text: stockIn?.productNama ?? ''),
-                    displayStringForOption: (p) => p.nama,
-                    optionsBuilder: (TextEditingValue text) {
-                      if (text.text.isEmpty) return products;
-                      return products.where((p) => p.nama.toLowerCase().contains(text.text.toLowerCase()));
-                    },
-                    onSelected: (p) {
-                      setS(() { selProduct = p; kg.text = Helpers.formatNumber(p.kg); });
-                    },
-                    fieldViewBuilder: (ctx, ctrl, fn, onSubmit) => TextField(
-                      controller: ctrl, focusNode: fn,
-                      decoration: const InputDecoration(labelText: 'Cari Nama Produk'),
-                    ),
-                    optionsViewBuilder: (context, onSelected, options) {
-                      return Align(
-                        alignment: Alignment.topLeft,
-                        child: Material(
-                          elevation: 4.0,
-                          borderRadius: BorderRadius.circular(12),
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(maxHeight: 200, maxWidth: constraints.maxWidth), 
-                            child: ListView.builder(
-                              padding: EdgeInsets.zero,
-                              shrinkWrap: true,
-                              itemCount: options.length,
-                              itemBuilder: (BuildContext context, int index) {
-                                final option = options.elementAt(index);
-                                return InkWell(
-                                  onTap: () => onSelected(option),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Text(option.nama),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                
-                const SizedBox(height: 12),
                 Autocomplete<String>(
                   initialValue: TextEditingValue(text: selAsal ?? ''),
                   optionsBuilder: (TextEditingValue text) {
@@ -232,13 +191,56 @@ class _StockInPageState extends State<StockInPage> {
                     onChanged: (val) => selAsal = val,
                   ),
                 ),
-                const SizedBox(height: 12),
-                TextField(controller: kg, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'Berat (Kg)')),
-                const SizedBox(height: 12),
-                TextField(controller: total, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Item')),
+                const SizedBox(height: 16),
+                
+                // Tampilkan List Keranjang
+                if (cartItems.isNotEmpty) ...[
+                  const Text('Daftar Produk:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  ...cartItems.asMap().entries.map((entry) {
+                    int idx = entry.key;
+                    StockInItem item = entry.value;
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        title: Text(item.productNama),
+                        subtitle: Text('${Helpers.formatNumber(item.kg)} kg • ${item.total} item'),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => setS(() => cartItems.removeAt(idx)),
+                        ),
+                      ),
+                    );
+                  }),
+                  const Divider(),
+                ],
+
+                // Tombol Tambah Produk ke Keranjang
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    await _showAddProductDialog(context, products, (newItem) {
+                      setS(() {
+                        // Cek jika produk sudah ada di keranjang, update totalnya
+                        int existingIdx = cartItems.indexWhere((e) => e.productId == newItem.productId);
+                        if (existingIdx >= 0) {
+                          final old = cartItems[existingIdx];
+                          cartItems[existingIdx] = StockInItem(
+                            productId: old.productId, productNama: old.productNama, kg: newItem.kg, total: old.total + newItem.total
+                          );
+                        } else {
+                          cartItems.add(newItem);
+                        }
+                      });
+                    });
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Tambah Produk ke Nota'),
+                ),
+                
                 const SizedBox(height: 12),
                 TextField(controller: catatan, decoration: const InputDecoration(labelText: 'Catatan (Opsional)')),
                 const SizedBox(height: 24),
+                
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -246,25 +248,84 @@ class _StockInPageState extends State<StockInPage> {
                     const SizedBox(width: 8),
                     ElevatedButton(
                       onPressed: () async {
-                        final t = int.tryParse(total.text);
-                        if (selProduct == null || selAsal == null || selAsal!.isEmpty || t == null) return;
+                        if (cartItems.isEmpty || selAsal == null || selAsal!.isEmpty) {
+                          AppSnackBar.error(ctx, 'Isi Asal Barang dan minimal 1 Produk');
+                          return;
+                        }
+                        
                         final model = StockInModel(
-                          id: stockIn?.id, productId: selProduct!.id!, productNama: selProduct!.nama, asalBarang: selAsal!,
-                          kg: Helpers.parseNumber(kg.text), total: t,
-                          tanggal: DateFormat('yyyy-MM-dd').format(_date), catatan: catatan.text,
+                          id: stockIn?.id, asalBarang: selAsal!, tanggal: DateFormat('yyyy-MM-dd').format(_date), 
+                          catatan: catatan.text, items: cartItems
                         );
-                        if (stockIn == null) { await _repo.addStockIn(model); } else { await _repo.updateStockIn(model); }
+                        
+                        if (stockIn == null) { 
+                          await _repo.addStockIn(model); 
+                        } else { 
+                          await _repo.updateStockIn(model); 
+                        }
+                        
                         if (mounted) Navigator.pop(ctx);
                         _load();
-                        if (mounted) _showNotif(stockIn == null ? 'Berhasil ditambah' : 'Berhasil diubah');
+                        if (mounted) AppSnackBar.success(context, stockIn == null ? 'Berhasil ditambah' : 'Berhasil diubah');
                       },
-                      child: const Text('Simpan'),
+                      child: const Text('Simpan Nota'),
                     ),
                   ],
                 )
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  // Dialog untuk memilih 1 produk dan memasukkan jumlahnya
+  Future<void> _showAddProductDialog(BuildContext parentCtx, List<ProductModel> products, Function(StockInItem) onAdd) async {
+    ProductModel? selProduct;
+    final kg = TextEditingController();
+    final total = TextEditingController();
+
+    await showDialog(
+      context: parentCtx,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: const Text('Tambah Produk'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<ProductModel>(
+                decoration: const InputDecoration(labelText: 'Pilih Produk'),
+                value: selProduct,
+                items: products.map((p) => DropdownMenuItem(value: p, child: Text(p.nama))).toList(),
+                onChanged: (p) {
+                  setS(() { 
+                    selProduct = p; 
+                    if (p != null) kg.text = Helpers.formatNumber(p.kg);
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+              TextField(controller: kg, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'Berat (Kg)')),
+              const SizedBox(height: 12),
+              TextField(controller: total, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Item')),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+            ElevatedButton(
+              onPressed: () {
+                final t = int.tryParse(total.text);
+                if (selProduct == null || t == null) return;
+                onAdd(StockInItem(
+                  productId: selProduct!.id!, productNama: selProduct!.nama, 
+                  kg: Helpers.parseNumber(kg.text), total: t
+                ));
+                Navigator.pop(ctx);
+              },
+              child: const Text('Tambahkan'),
+            ),
+          ],
         ),
       ),
     );

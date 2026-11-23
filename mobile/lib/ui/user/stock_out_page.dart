@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../core/helpers.dart';
+import '../../core/ui_helpers.dart';
 import '../../core/theme.dart';
 import '../../data/models/client.dart';
 import '../../data/models/product.dart';
@@ -33,16 +34,6 @@ class _StockOutPageState extends State<StockOutPage> {
     setState(() => _loading = false);
   }
 
-  void _showNotif(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -50,7 +41,7 @@ class _StockOutPageState extends State<StockOutPage> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showFormBottomSheet(),
         icon: const Icon(Icons.add),
-        label: const Text('Tambah'),
+        label: const Text('Tambah Nota'),
       ),
       body: RefreshIndicator(
         onRefresh: _load,
@@ -76,37 +67,55 @@ class _StockOutPageState extends State<StockOutPage> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text('Client: ${it.clientNama}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit, color: Colors.blue, size: 24),
+                                    onPressed: () => _showFormBottomSheet(stockOut: it),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, color: Colors.red, size: 24),
+                                    onPressed: () => _deleteStockOut(it),
+                                  ),
+                                ],
+                              )
+                            ],
+                          ),
+                          const Divider(),
+                          ...it.items.map((item) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(it.productNama, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                Text('Client: ${it.clientNama}', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    _buildBadge('${Helpers.formatNumber(it.kg)} kg', Colors.orange),
-                                    const Spacer(),
-                                    Text('-Rp ${Helpers.formatNumber(it.total)} (${it.pcs} pcs)', style: const TextStyle(color: AppTheme.danger, fontWeight: FontWeight.bold, fontSize: 14)),
-                                  ],
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(item.productNama, style: const TextStyle(fontWeight: FontWeight.w500)),
+                                      Text('${item.pcs} pcs • ${Helpers.formatNumber(item.kg)} kg', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                                    ],
+                                  ),
                                 ),
+                                Text('Rp ${Helpers.formatNumber(item.subtotal)}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.danger)),
                               ],
                             ),
-                          ),
+                          )),
+                          const Divider(),
                           Row(
-                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit, color: Colors.blue, size: 28),
-                                onPressed: () => _showFormBottomSheet(stockOut: it),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red, size: 28),
-                                onPressed: () => _deleteStockOut(it),
-                              ),
+                              const Text('Grand Total:', style: TextStyle(fontWeight: FontWeight.bold)),
+                              Text('-Rp ${Helpers.formatNumber(it.grandTotal)}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.danger, fontSize: 16)),
                             ],
                           )
                         ],
@@ -119,20 +128,12 @@ class _StockOutPageState extends State<StockOutPage> {
     );
   }
 
-  Widget _buildBadge(String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: color.withOpacity(0.5))),
-      child: Text(text, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
-    );
-  }
-
   Future<void> _deleteStockOut(StockOutModel s) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Konfirmasi Hapus'),
-        content: Text('Yakin ingin menghapus data keluar ini?'),
+        content: Text('Yakin ingin menghapus nota ini? Stok dan Saldo Client akan dikembalikan.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
           TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Hapus', style: TextStyle(color: Colors.red))),
@@ -142,7 +143,7 @@ class _StockOutPageState extends State<StockOutPage> {
     if (confirm == true && s.id != null) {
       await _repo.deleteStockOut(s.id!);
       _load();
-      if (mounted) _showNotif('Data berhasil dihapus');
+      if (mounted) AppSnackBar.success(context, 'Nota berhasil dihapus');
     }
   }
 
@@ -151,19 +152,12 @@ class _StockOutPageState extends State<StockOutPage> {
     final clients = await ClientRepository().getAll();
     if (!mounted) return;
     if (products.isEmpty || clients.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Produk/Client belum ada')));
+      AppSnackBar.error(context, 'Produk/Client belum ada');
       return;
     }
 
-    ProductModel? selProduct = stockOut != null ? products.firstWhere((p) => p.id == stockOut.productId, orElse: () => products.first) : null;
     ClientModel? selClient = stockOut != null ? clients.firstWhere((c) => c.id == stockOut.clientId, orElse: () => clients.first) : null;
-    
-    final desc = TextEditingController(text: stockOut?.deskripsi ?? '');
-    final kg = TextEditingController(text: stockOut != null ? Helpers.formatNumber(stockOut.kg) : '');
-    final pcs = TextEditingController(text: stockOut?.pcs.toString() ?? '');
-    final harga = TextEditingController(text: stockOut != null ? Helpers.formatNumber(stockOut.harga) : '');
-    final ppn = TextEditingController(text: stockOut != null ? Helpers.formatNumber(stockOut.ppn) : '');
-    final restitusi = TextEditingController(text: stockOut != null ? Helpers.formatNumber(stockOut.restitusi) : '');
+    List<StockOutItem> cartItems = stockOut != null ? List.from(stockOut.items) : [];
 
     await showModalBottomSheet(
       context: context,
@@ -174,140 +168,226 @@ class _StockOutPageState extends State<StockOutPage> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: StatefulBuilder(
-            builder: (ctx, setS) => Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(stockOut == null ? 'Tambah Barang Keluar' : 'Edit Barang Keluar', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-                const SizedBox(height: 20),
-                
-                DropdownButtonFormField<ProductModel>(
-                  decoration: const InputDecoration(labelText: 'Pilih Produk'),
-                  value: selProduct,
-                  items: products.map((p) => DropdownMenuItem(value: p, child: Text(p.nama))).toList(),
-                  onChanged: (p) {
-                    setS(() { 
-                      selProduct = p; 
-                      if (p != null) {
-                        desc.text = p.deskripsi; 
-                        kg.text = Helpers.formatNumber(p.kg); 
-                        harga.text = Helpers.formatNumber(p.harga);
-                      }
-                    });
-                  },
-                ),
-                const SizedBox(height: 12),
+            builder: (ctx, setS) {
+              // Hitung Grand Total secara dinamis
+              double grandTotal = cartItems.fold(0, (sum, item) => sum + item.subtotal);
 
-                LayoutBuilder(
-                  builder: (context, constraints) => Autocomplete<ClientModel>(
-                    initialValue: TextEditingValue(text: selClient?.nama ?? ''),
-                    displayStringForOption: (c) => c.nama,
-                    optionsBuilder: (TextEditingValue text) {
-                      if (text.text.isEmpty) return clients;
-                      return clients.where((c) => c.nama.toLowerCase().contains(text.text.toLowerCase()));
-                    },
-                    onSelected: (c) => setS(() => selClient = c),
-                    fieldViewBuilder: (ctx, ctrl, fn, onSubmit) => TextField(controller: ctrl, focusNode: fn, decoration: const InputDecoration(labelText: 'Cari Client')),
-                    optionsViewBuilder: (context, onSelected, options) {
-                      return Align(
-                        alignment: Alignment.topLeft,
-                        child: Material(
-                          elevation: 4.0,
-                          borderRadius: BorderRadius.circular(12),
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(maxHeight: 200, maxWidth: constraints.maxWidth),
-                            child: ListView.builder(
-                              padding: EdgeInsets.zero,
-                              shrinkWrap: true,
-                              itemCount: options.length,
-                              itemBuilder: (BuildContext context, int index) {
-                                final option = options.elementAt(index);
-                                return InkWell(
-                                  onTap: () => onSelected(option),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Text(option.nama),
-                                  ),
-                                );
-                              },
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(stockOut == null ? 'Tambah Barang Keluar' : 'Edit Barang Keluar', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                  const SizedBox(height: 20),
+                  
+                  LayoutBuilder(
+                    builder: (context, constraints) => Autocomplete<ClientModel>(
+                      initialValue: TextEditingValue(text: selClient?.nama ?? ''),
+                      displayStringForOption: (c) => c.nama,
+                      optionsBuilder: (TextEditingValue text) {
+                        if (text.text.isEmpty) return clients;
+                        return clients.where((c) => c.nama.toLowerCase().contains(text.text.toLowerCase()));
+                      },
+                      onSelected: (c) => setS(() => selClient = c),
+                      fieldViewBuilder: (ctx, ctrl, fn, onSubmit) => TextField(controller: ctrl, focusNode: fn, decoration: const InputDecoration(labelText: 'Cari Client')),
+                      optionsViewBuilder: (context, onSelected, options) {
+                        return Align(
+                          alignment: Alignment.topLeft,
+                          child: Material(
+                            elevation: 4.0,
+                            borderRadius: BorderRadius.circular(12),
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(maxHeight: 200, maxWidth: constraints.maxWidth),
+                              child: ListView.builder(
+                                padding: EdgeInsets.zero,
+                                shrinkWrap: true,
+                                itemCount: options.length,
+                                itemBuilder: (BuildContext context, int index) {
+                                  final option = options.elementAt(index);
+                                  return InkWell(
+                                    onTap: () => onSelected(option),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16.0),
+                                      child: Text(option.nama),
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  if (cartItems.isNotEmpty) ...[
+                    const Text('Daftar Produk:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    ...cartItems.asMap().entries.map((entry) {
+                      int idx = entry.key;
+                      StockOutItem item = entry.value;
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          title: Text(item.productNama),
+                          subtitle: Text('${item.pcs} pcs • Rp ${Helpers.formatNumber(item.subtotal)}'),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => setS(() => cartItems.removeAt(idx)),
                           ),
                         ),
                       );
+                    }),
+                    const Divider(),
+                  ],
+
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      await _showAddProductDialog(context, products, (newItem) {
+                        setS(() => cartItems.add(newItem));
+                      });
                     },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Tambah Produk ke Nota'),
                   ),
-                ),
-                const SizedBox(height: 12),
-                
-                TextField(controller: desc, decoration: const InputDecoration(labelText: 'Deskripsi')),
-                const SizedBox(height: 12),
-                
-                Row(
-                  children: [
-                    Expanded(child: TextField(controller: kg, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'Kg'))),
-                    const SizedBox(width: 8),
-                    Expanded(child: TextField(controller: pcs, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Pcs'), onChanged: (v) => setS(() {}))),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                
-                TextField(controller: harga, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'Harga'), onChanged: (v) => setS(() {})),
-                const SizedBox(height: 12),
-
-                Row(
-                  children: [
-                    Expanded(child: TextField(controller: ppn, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'PPN (Rp)'), onChanged: (v) => setS(() {}))),
-                    const SizedBox(width: 8),
-                    Expanded(child: TextField(controller: restitusi, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'Restitusi (Rp)'), onChanged: (v) => setS(() {}))),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                  child: Text(
-                    'Total Harga: Rp ${Helpers.formatNumber((int.tryParse(pcs.text) ?? 0) * Helpers.parseNumber(harga.text) + Helpers.parseNumber(ppn.text) - Helpers.parseNumber(restitusi.text))}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: () async {
-                        if (selProduct == null || selClient == null) return;
-                        
-                        final finalPcs = int.tryParse(pcs.text) ?? 0;
-                        final finalHarga = Helpers.parseNumber(harga.text);
-                        final finalPpn = Helpers.parseNumber(ppn.text);
-                        final finalRestitusi = Helpers.parseNumber(restitusi.text);
-                        final finalTotal = (finalPcs * finalHarga) + finalPpn - finalRestitusi;
-
-                        final model = StockOutModel(
-                          id: stockOut?.id, clientId: selClient!.id!, clientNama: selClient!.nama, 
-                          productId: selProduct!.id!, productNama: selProduct!.nama,
-                          deskripsi: desc.text, kg: Helpers.parseNumber(kg.text), pcs: finalPcs,
-                          harga: finalHarga, ppn: finalPpn, restitusi: finalRestitusi, total: finalTotal, tanggal: DateFormat('yyyy-MM-dd').format(_date),
-                        );
-                        if (stockOut == null) { await _repo.addStockOut(model); } else { await _repo.updateStockOut(model); }
-                        if (mounted) Navigator.pop(ctx);
-                        _load();
-                        if (mounted) _showNotif(stockOut == null ? 'Berhasil ditambah' : 'Berhasil diubah');
-                      },
-                      child: const Text('Simpan'),
+                  
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                    child: Text(
+                      'Grand Total: Rp ${Helpers.formatNumber(grandTotal)}',
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue, fontSize: 16),
+                      textAlign: TextAlign.center,
                     ),
-                  ],
-                )
-              ],
-            ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () async {
+                          if (cartItems.isEmpty || selClient == null) {
+                            AppSnackBar.error(ctx, 'Isi Client dan minimal 1 Produk');
+                            return;
+                          }
+
+                          final model = StockOutModel(
+                            id: stockOut?.id, clientId: selClient!.id!, clientNama: selClient!.nama, 
+                            tanggal: DateFormat('yyyy-MM-dd').format(_date),
+                            items: cartItems, grandTotal: grandTotal,
+                          );
+                          
+                          if (stockOut == null) { 
+                            await _repo.addStockOut(model); 
+                          } else { 
+                            await _repo.updateStockOut(model); 
+                          }
+                          if (mounted) Navigator.pop(ctx);
+                          _load();
+                          if (mounted) AppSnackBar.success(context, stockOut == null ? 'Berhasil ditambah' : 'Berhasil diubah');
+                        },
+                        child: const Text('Simpan Nota'),
+                      ),
+                    ],
+                  )
+                ],
+              );
+            },
           ),
         ),
+      ),
+    );
+  }
+
+  // Dialog Tambah Produk (dengan form PPN, Restitusi, dan Hitung Subtotal)
+  Future<void> _showAddProductDialog(BuildContext parentCtx, List<ProductModel> products, Function(StockOutItem) onAdd) async {
+    ProductModel? selProduct;
+    final desc = TextEditingController();
+    final kg = TextEditingController();
+    final pcs = TextEditingController();
+    final harga = TextEditingController();
+    final ppn = TextEditingController();
+    final restitusi = TextEditingController();
+
+    await showDialog(
+      context: parentCtx,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setS) {
+          double subtotal = (int.tryParse(pcs.text) ?? 0) * Helpers.parseNumber(harga.text) + Helpers.parseNumber(ppn.text) - Helpers.parseNumber(restitusi.text);
+          
+          return AlertDialog(
+            title: const Text('Tambah Produk'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<ProductModel>(
+                    decoration: const InputDecoration(labelText: 'Pilih Produk'),
+                    value: selProduct,
+                    items: products.map((p) => DropdownMenuItem(value: p, child: Text(p.nama))).toList(),
+                    onChanged: (p) {
+                      setS(() { 
+                        selProduct = p; 
+                        if (p != null) {
+                          desc.text = p.deskripsi; 
+                          kg.text = Helpers.formatNumber(p.kg); 
+                          harga.text = Helpers.formatNumber(p.harga);
+                        }
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(controller: desc, decoration: const InputDecoration(labelText: 'Deskripsi')),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(child: TextField(controller: kg, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'Kg'))),
+                      const SizedBox(width: 8),
+                      Expanded(child: TextField(controller: pcs, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Pcs'), onChanged: (v) => setS(() {}))),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(controller: harga, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'Harga'), onChanged: (v) => setS(() {})),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(child: TextField(controller: ppn, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'PPN (Rp)'), onChanged: (v) => setS(() {}))),
+                      const SizedBox(width: 8),
+                      Expanded(child: TextField(controller: restitusi, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'Restitusi (Rp)'), onChanged: (v) => setS(() {}))),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text('Subtotal: Rp ${Helpers.formatNumber(subtotal)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+              ElevatedButton(
+                onPressed: () {
+                  final finalPcs = int.tryParse(pcs.text) ?? 0;
+                  final finalHarga = Helpers.parseNumber(harga.text);
+                  final finalPpn = Helpers.parseNumber(ppn.text);
+                  final finalRestitusi = Helpers.parseNumber(restitusi.text);
+                  
+                  if (selProduct == null || finalPcs <= 0) return;
+                  
+                  onAdd(StockOutItem(
+                    productId: selProduct!.id!, productNama: selProduct!.nama, deskripsi: desc.text,
+                    kg: Helpers.parseNumber(kg.text), pcs: finalPcs, harga: finalHarga,
+                    ppn: finalPpn, restitusi: finalRestitusi, subtotal: subtotal,
+                  ));
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Tambahkan'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

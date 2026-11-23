@@ -94,7 +94,6 @@ class UserDashboard extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Username tanpa spasi
                             Text(auth.user?.username.replaceAll(' ', '') ?? '-', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                             Text(auth.user?.email ?? '-', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
                           ],

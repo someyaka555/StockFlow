@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/helpers.dart';
+import '../../core/ui_helpers.dart';
 import '../../data/models/product.dart';
 import '../../data/repositories/product_repository.dart';
 
@@ -24,16 +25,6 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
     setState(() => _loading = true);
     try { _items = await _repo.getAll(); } catch (_) {}
     setState(() => _loading = false);
-  }
-
-  void _showNotif(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 
   @override
@@ -83,19 +74,16 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                                 ],
                               ),
                             ),
-                            // Tombol Aksi Langsung
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
                                   icon: const Icon(Icons.edit, color: Colors.blue, size: 28),
                                   onPressed: () => _showFormDialog(product: p),
-                                  tooltip: 'Edit',
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.delete, color: Colors.red, size: 28),
                                   onPressed: () => _deleteProduct(p),
-                                  tooltip: 'Hapus',
                                 ),
                               ],
                             )
@@ -131,7 +119,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
     if (confirm == true && p.id != null) {
       await _repo.delete(p.id!);
       _load();
-      if (mounted) _showNotif('Produk berhasil dihapus');
+      if (mounted) AppSnackBar.success(context, 'Produk berhasil dihapus');
     }
   }
 
@@ -181,7 +169,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                         if (product == null) { await _repo.create(model); } else { await _repo.update(model); }
                         if (mounted) Navigator.pop(context);
                         _load();
-                        if (mounted) _showNotif('Produk berhasil disimpan');
+                        if (mounted) AppSnackBar.success(context, 'Produk berhasil disimpan');
                       },
                       child: const Text('Simpan'),
                     ),

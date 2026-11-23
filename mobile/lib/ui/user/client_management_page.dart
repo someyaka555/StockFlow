@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/helpers.dart';
+import '../../core/ui_helpers.dart';
 import '../../data/models/client.dart';
 import '../../data/repositories/client_repository.dart';
 
@@ -24,16 +25,6 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
     setState(() => _loading = true);
     try { _items = await _repo.getAll(); } catch (_) {}
     setState(() => _loading = false);
-  }
-
-  void _showNotif(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 
   @override
@@ -84,7 +75,6 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                                 ],
                               ),
                             ),
-                            // Tombol Aksi Langsung
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -171,7 +161,7 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                           await _repo.update(updated);
                           if (mounted) Navigator.pop(ctx);
                           _load();
-                          if (mounted) _showNotif('Saldo berhasil diperbarui');
+                          if (mounted) AppSnackBar.success(context, 'Saldo berhasil diperbarui');
                         },
                         child: const Text('Simpan'),
                       ),
@@ -223,7 +213,7 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                         if (client == null) { await _repo.create(model); } else { await _repo.update(model); }
                         if (mounted) Navigator.pop(context);
                         _load();
-                        if (mounted) _showNotif('Client berhasil disimpan');
+                        if (mounted) AppSnackBar.success(context, 'Client berhasil disimpan');
                       },
                       child: const Text('Simpan'),
                     ),
