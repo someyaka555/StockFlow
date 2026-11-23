@@ -35,25 +35,43 @@ class AdminDashboard extends StatelessWidget {
         appBar: AppBar(
           title: const Text('Dashboard', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           actions: [
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert),
-              onSelected: (value) async {
-                if (value == 'profile') {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
-                } else if (value == 'logout') {
-                  auth.logout();
-                }
+            // Tombol Switch Mode pindah ke sini
+            IconButton(
+              tooltip: 'Mode User',
+              icon: const Icon(Icons.swap_horiz, color: Colors.blue),
+              onPressed: () => auth.toggleMode(),
+            ),
+            // Ikon Profil (Ganti Titik 3)
+            IconButton(
+              icon: const Icon(Icons.account_circle, size: 28),
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  builder: (ctx) => SafeArea(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.person),
+                          title: const Text('Profil'),
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.logout, color: Colors.red),
+                          title: const Text('Logout', style: TextStyle(color: Colors.red)),
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            auth.logout();
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                );
               },
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                const PopupMenuItem<String>(
-                  value: 'profile', 
-                  child: ListTile(leading: Icon(Icons.person), title: Text('Profil'))
-                ),
-                const PopupMenuItem<String>(
-                  value: 'logout', 
-                  child: ListTile(leading: Icon(Icons.logout, color: Colors.red), title: Text('Logout', style: TextStyle(color: Colors.red)))
-                ),
-              ],
             ),
           ],
         ),
@@ -99,7 +117,6 @@ class AdminDashboard extends StatelessWidget {
                   children: [
                     _menu(context, 'Kelola User', Icons.people, const UserManagementPage()),
                     _menu(context, 'Pengaturan API', Icons.settings, const SettingsPage()),
-                    _menu(context, 'Mode User', Icons.person, const UserDashboard(), isSwitch: true),
                   ],
                 ),
               ),
@@ -110,16 +127,10 @@ class AdminDashboard extends StatelessWidget {
     );
   }
 
-  Widget _menu(BuildContext c, String title, IconData icon, Widget page, {bool isSwitch = false}) {
+  Widget _menu(BuildContext c, String title, IconData icon, Widget page) {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
-      onTap: () {
-        if (isSwitch) {
-          c.read<AuthProvider>().toggleMode();
-        } else {
-          Navigator.push(c, MaterialPageRoute(builder: (_) => page));
-        }
-      },
+      onTap: () => Navigator.push(c, MaterialPageRoute(builder: (_) => page)),
       child: Card(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

@@ -55,18 +55,12 @@ class _UserManagementPageState extends State<UserManagementPage> {
                       onSelected: (value) async {
                         if (value == 'detail') {
                           _showDetailDialog(u);
-                        } else if (value == 'edit') {
-                          _showEditDialog(u);
-                        } else if (value == 'block') {
-                          _toggleBlock(u);
                         } else if (value == 'delete') {
                           _deleteUser(u);
                         }
                       },
                       itemBuilder: (_) => [
-                        const PopupMenuItem(value: 'detail', child: Text('Lihat Detail')),
-                        const PopupMenuItem(value: 'edit', child: Text('Edit Role')),
-                        PopupMenuItem(value: 'block', child: Text(u.isBlocked ? 'Buka Blokir' : 'Blokir User')),
+                        const PopupMenuItem(value: 'detail', child: Text('Detail')),
                         const PopupMenuItem(value: 'delete', child: Text('Hapus', style: TextStyle(color: Colors.red))),
                       ],
                     ),
@@ -77,86 +71,88 @@ class _UserManagementPageState extends State<UserManagementPage> {
     );
   }
 
-  void _showDetailDialog(UserModel u) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Detail User'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Nama: ${u.username}'),
-            Text('Email: ${u.email}'),
-            Text('Sandi: (Simulasi: password123)'), // Di mode tester, kita tampilkan sandi default
-            Text('Role: ${u.role.name}'),
-            Text('Status: ${u.isBlocked ? "Diblokir" : "Aktif"}'),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Tutup')),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showEditDialog(UserModel u) async {
-    UserRole selectedRole = u.role;
+  void _showDetailDialog(UserModel u) async {
+    bool isObscure = true;
+    
     await showDialog(
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (ctx, setS) => AlertDialog(
-          title: Text('Edit Role: ${u.username}'),
-          content: DropdownButtonFormField<UserRole>(
-            value: selectedRole,
-            decoration: const InputDecoration(labelText: 'Role'),
-            items: const [
-              DropdownMenuItem(value: UserRole.user, child: Text('User')),
-              DropdownMenuItem(value: UserRole.admin, child: Text('Admin')),
-            ],
-            onChanged: (v) => setS(() => selectedRole = v ?? UserRole.user),
+          title: const Text('Detail User', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildDetailRow('ID Account', u.id ?? '-'),
+                const SizedBox(height: 12),
+                _buildDetailRow('Username', u.username),
+                const SizedBox(height: 12),
+                _buildDetailRow('Email', u.email),
+                const SizedBox(height: 12),
+                // Show/Hide Sandi
+                Row(
+                  children: [
+                    const Text('Sandi: ', style: TextStyle(color: Colors.grey)),
+                    const Expanded(child: Text('password123', style: TextStyle(fontWeight: FontWeight.w500))),
+                    IconButton(
+                      icon: Icon(isObscure ? Icons.visibility_off : Icons.visibility, size: 20),
+                      onPressed: () => setS(() => isObscure = !isObscure),
+                    ),
+                  ],
+                ),
+                const Divider(height: 24),
+                // Switch Blokir
+                SwitchListTile(
+                  title: const Text('Blokir User'),
+                  value: u.isBlocked,
+                  onChanged: (val) async {
+                    final updated = UserModel(
+                      id: u.id, username: u.username, email: u.email, 
+                      role: u.role, isVerified: u.isVerified, isBlocked: val
+                    );
+                    await _repo.update(updated);
+                    if (mounted) {
+                      Navigator.pop(ctx);
+                      _load();
+                    }
+                  },
+                ),
+                // Switch Role Admin
+                SwitchListTile(
+                  title: const Text('Jadikan Admin'),
+                  value: u.role == UserRole.admin,
+                  onChanged: (val) async {
+                    final updated = UserModel(
+                      id: u.id, username: u.username, email: u.email, 
+                      role: val ? UserRole.admin : UserRole.user, isVerified: u.isVerified, isBlocked: u.isBlocked
+                    );
+                    await _repo.update(updated);
+                    if (mounted) {
+                      Navigator.pop(ctx);
+                      _load();
+                    }
+                  },
+                ),
+              ],
+            ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-            ElevatedButton(
-              onPressed: () async {
-                final updated = UserModel(
-                  id: u.id, username: u.username, email: u.email, 
-                  role: selectedRole, isVerified: u.isVerified, isBlocked: u.isBlocked
-                );
-                await _repo.update(updated);
-                if (mounted) Navigator.pop(ctx);
-                _load();
-              },
-              child: const Text('Simpan'),
-            ),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
           ],
         ),
       ),
     );
   }
 
-  Future<void> _toggleBlock(UserModel u) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Konfirmasi'),
-        content: Text('Yakin ingin ${u.isBlocked ? "membuka blokir" : "memblokir"} user ${u.username}?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Ya')),
-        ],
-      ),
+  Widget _buildDetailRow(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+      ],
     );
-
-    if (confirm == true) {
-      final updated = UserModel(
-        id: u.id, username: u.username, email: u.email, 
-        role: u.role, isVerified: u.isVerified, isBlocked: !u.isBlocked
-      );
-      await _repo.update(updated);
-      _load();
-    }
   }
 
   Future<void> _deleteUser(UserModel u) async {
