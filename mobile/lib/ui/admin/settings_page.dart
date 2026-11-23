@@ -43,11 +43,12 @@ class _SettingsPageState extends State<SettingsPage> {
                   await context.read<SettingsProvider>().save(_url.text.trim());
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Pengaturan API disimpan', textAlign: TextAlign.center, style: TextStyle(color: Colors.white)),
+                      SnackBar(
+                        content: const Text('Pengaturan API disimpan', textAlign: TextAlign.center, style: TextStyle(color: Colors.white)),
                         backgroundColor: Colors.green,
                         behavior: SnackBarBehavior.floating,
-                        margin: EdgeInsets.only(top: 20, left: 20, right: 20, bottom: 0),
+                        // PERHATIKAN: Tidak ada 'const' di sini
+                        margin: const EdgeInsets.only(top: 20, left: 20, right: 20, bottom: 0),
                       ),
                     );
                   }
