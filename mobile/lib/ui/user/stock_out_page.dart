@@ -62,66 +62,72 @@ class _StockOutPageState extends State<StockOutPage> {
             else if (_items.isEmpty)
               const Center(child: Text('Belum ada barang keluar'))
             else
-              ..._items.map((it) => Card(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text('Client: ${it.clientNama}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                              ),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.edit, color: Colors.blue, size: 24),
-                                    onPressed: () => _showFormBottomSheet(stockOut: it),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete, color: Colors.red, size: 24),
-                                    onPressed: () => _deleteStockOut(it),
-                                  ),
-                                ],
-                              )
-                            ],
-                          ),
-                          const Divider(),
-                          ...it.items.map((item) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(item.productNama, style: const TextStyle(fontWeight: FontWeight.w500)),
-                                      Text('${item.pcs} pcs • ${Helpers.formatNumber(item.kg)} kg', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                                    ],
-                                  ),
-                                ),
-                                Text('Rp ${Helpers.formatNumber(item.subtotal)}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.danger)),
-                              ],
-                            ),
-                          )),
-                          const Divider(),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Grand Total:', style: TextStyle(fontWeight: FontWeight.bold)),
-                              Text('-Rp ${Helpers.formatNumber(it.grandTotal)}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.danger, fontSize: 16)),
-                            ],
-                          )
-                        ],
-                      ),
+              ..._items.map((it) => _buildNotaCard(it)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // REDESIGN UI KARTU (Tugas #18)
+  Widget _buildNotaCard(StockOutModel it) {
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                  child: const Icon(Icons.local_shipping_outlined, color: Colors.red),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text('Client: ${it.clientNama}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.blue, size: 24),
+                  onPressed: () => _showFormBottomSheet(stockOut: it),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red, size: 24),
+                  onPressed: () => _deleteStockOut(it),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            ...it.items.map((item) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(item.productNama, style: const TextStyle(fontWeight: FontWeight.w500)),
+                        Text('${item.pcs} pcs • ${Helpers.formatNumber(item.kg)} kg', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                      ],
                     ),
-                  )),
+                  ),
+                  Text('Rp ${Helpers.formatNumber(item.subtotal)}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.danger)),
+                ],
+              ),
+            )),
+            const Divider(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Grand Total:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text('-Rp ${Helpers.formatNumber(it.grandTotal)}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.danger, fontSize: 16)),
+              ],
+            )
           ],
         ),
       ),
@@ -140,9 +146,10 @@ class _StockOutPageState extends State<StockOutPage> {
         ],
       ),
     );
+    // FIX BUG DELETE (Tugas #14)
     if (confirm == true && s.id != null) {
       await _repo.deleteStockOut(s.id!);
-      _load();
+      await _load();
       if (mounted) AppSnackBar.success(context, 'Nota berhasil dihapus');
     }
   }
@@ -158,6 +165,10 @@ class _StockOutPageState extends State<StockOutPage> {
 
     ClientModel? selClient = stockOut != null ? clients.firstWhere((c) => c.id == stockOut.clientId, orElse: () => clients.first) : null;
     List<StockOutItem> cartItems = stockOut != null ? List.from(stockOut.items) : [];
+    
+    // Controller untuk PPN & Restitusi di level Nota (Tugas #15)
+    final ppnNota = TextEditingController(text: stockOut != null ? Helpers.formatNumber(stockOut.ppnNota) : '');
+    final restitusiNota = TextEditingController(text: stockOut != null ? Helpers.formatNumber(stockOut.restitusiNota) : '');
 
     await showModalBottomSheet(
       context: context,
@@ -169,8 +180,8 @@ class _StockOutPageState extends State<StockOutPage> {
           padding: const EdgeInsets.all(20),
           child: StatefulBuilder(
             builder: (ctx, setS) {
-              // Hitung Grand Total secara dinamis
-              double grandTotal = cartItems.fold(0, (sum, item) => sum + item.subtotal);
+              double totalBarang = cartItems.fold(0, (sum, item) => sum + item.subtotal);
+              double grandTotal = totalBarang + Helpers.parseNumber(ppnNota.text) - Helpers.parseNumber(restitusiNota.text);
 
               return Column(
                 mainAxisSize: MainAxisSize.min,
@@ -231,9 +242,22 @@ class _StockOutPageState extends State<StockOutPage> {
                         child: ListTile(
                           title: Text(item.productNama),
                           subtitle: Text('${item.pcs} pcs • Rp ${Helpers.formatNumber(item.subtotal)}'),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => setS(() => cartItems.removeAt(idx)),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.blue),
+                                onPressed: () async {
+                                  await _showAddProductDialog(context, products, (newItem) {
+                                    setS(() => cartItems[idx] = newItem);
+                                  }, initialItem: item);
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () => setS(() => cartItems.removeAt(idx)),
+                              ),
+                            ],
                           ),
                         ),
                       );
@@ -252,6 +276,17 @@ class _StockOutPageState extends State<StockOutPage> {
                   ),
                   
                   const SizedBox(height: 16),
+                  
+                  // INPUT PPN & RESTITUSI DI LUAR (Tugas #15)
+                  Row(
+                    children: [
+                      Expanded(child: TextField(controller: ppnNota, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'PPN (Rp)'), onChanged: (v) => setS(() {}))),
+                      const SizedBox(width: 8),
+                      Expanded(child: TextField(controller: restitusiNota, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'Restitusi (Rp)'), onChanged: (v) => setS(() {}))),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
@@ -279,18 +314,17 @@ class _StockOutPageState extends State<StockOutPage> {
                             id: stockOut?.id, clientId: selClient!.id!, clientNama: selClient!.nama, 
                             tanggal: DateFormat('yyyy-MM-dd').format(_date),
                             items: cartItems, grandTotal: grandTotal,
+                            ppnNota: Helpers.parseNumber(ppnNota.text),
+                            restitusiNota: Helpers.parseNumber(restitusiNota.text),
                           );
                           
-                          if (stockOut == null) { 
-                            await _repo.addStockOut(model); 
-                          } else { 
-                            await _repo.updateStockOut(model); 
-                          }
+                          if (stockOut == null) { await _repo.addStockOut(model); } else { await _repo.updateStockOut(model); }
                           if (mounted) Navigator.pop(ctx);
-                          _load();
+                          await _load();
                           if (mounted) AppSnackBar.success(context, stockOut == null ? 'Berhasil ditambah' : 'Berhasil diubah');
                         },
-                        child: const Text('Simpan Nota'),
+                        // UBAH TEXT TOMBOL (Tugas #11)
+                        child: const Text('Simpan'),
                       ),
                     ],
                   )
@@ -303,24 +337,21 @@ class _StockOutPageState extends State<StockOutPage> {
     );
   }
 
-  // Dialog Tambah Produk (dengan form PPN, Restitusi, dan Hitung Subtotal)
-  Future<void> _showAddProductDialog(BuildContext parentCtx, List<ProductModel> products, Function(StockOutItem) onAdd) async {
-    ProductModel? selProduct;
-    final desc = TextEditingController();
-    final kg = TextEditingController();
-    final pcs = TextEditingController();
-    final harga = TextEditingController();
-    final ppn = TextEditingController();
-    final restitusi = TextEditingController();
+  Future<void> _showAddProductDialog(BuildContext parentCtx, List<ProductModel> products, Function(StockOutItem) onAdd, {StockOutItem? initialItem}) async {
+    ProductModel? selProduct = initialItem != null ? products.firstWhere((p) => p.id == initialItem.productId, orElse: () => products.first) : null;
+    final desc = TextEditingController(text: initialItem?.deskripsi ?? '');
+    final kg = TextEditingController(text: initialItem != null ? Helpers.formatNumber(initialItem.kg) : '');
+    final pcs = TextEditingController(text: initialItem?.pcs.toString() ?? '');
+    final harga = TextEditingController(text: initialItem != null ? Helpers.formatNumber(initialItem.harga) : '');
 
     await showDialog(
       context: parentCtx,
       builder: (_) => StatefulBuilder(
         builder: (ctx, setS) {
-          double subtotal = (int.tryParse(pcs.text) ?? 0) * Helpers.parseNumber(harga.text) + Helpers.parseNumber(ppn.text) - Helpers.parseNumber(restitusi.text);
+          double subtotal = (int.tryParse(pcs.text) ?? 0) * Helpers.parseNumber(harga.text);
           
           return AlertDialog(
-            title: const Text('Tambah Produk'),
+            title: Text(initialItem == null ? 'Tambah Produk' : 'Edit Produk'),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -352,14 +383,9 @@ class _StockOutPageState extends State<StockOutPage> {
                   ),
                   const SizedBox(height: 12),
                   TextField(controller: harga, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'Harga'), onChanged: (v) => setS(() {})),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(child: TextField(controller: ppn, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'PPN (Rp)'), onChanged: (v) => setS(() {}))),
-                      const SizedBox(width: 8),
-                      Expanded(child: TextField(controller: restitusi, keyboardType: TextInputType.number, inputFormatters: [ThousandsFormatter()], decoration: const InputDecoration(labelText: 'Restitusi (Rp)'), onChanged: (v) => setS(() {}))),
-                    ],
-                  ),
+                  
+                  // PPN & Restitusi DIHAPUS dari sini (Tugas #15)
+                  
                   const SizedBox(height: 16),
                   Text('Subtotal: Rp ${Helpers.formatNumber(subtotal)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
                 ],
@@ -371,15 +397,13 @@ class _StockOutPageState extends State<StockOutPage> {
                 onPressed: () {
                   final finalPcs = int.tryParse(pcs.text) ?? 0;
                   final finalHarga = Helpers.parseNumber(harga.text);
-                  final finalPpn = Helpers.parseNumber(ppn.text);
-                  final finalRestitusi = Helpers.parseNumber(restitusi.text);
                   
                   if (selProduct == null || finalPcs <= 0) return;
                   
                   onAdd(StockOutItem(
                     productId: selProduct!.id!, productNama: selProduct!.nama, deskripsi: desc.text,
                     kg: Helpers.parseNumber(kg.text), pcs: finalPcs, harga: finalHarga,
-                    ppn: finalPpn, restitusi: finalRestitusi, subtotal: subtotal,
+                    subtotal: subtotal,
                   ));
                   Navigator.pop(ctx);
                 },
