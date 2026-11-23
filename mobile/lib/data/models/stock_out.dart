@@ -8,6 +8,8 @@ class StockOutModel {
   final double kg;
   final int pcs;
   final double harga;
+  final double ppn;       // Baru
+  final double restitusi; // Baru
   final double total;
   final String tanggal;
 
@@ -21,6 +23,8 @@ class StockOutModel {
     required this.kg,
     required this.pcs,
     required this.harga,
+    this.ppn = 0.0,
+    this.restitusi = 0.0,
     required this.total,
     required this.tanggal,
   });
@@ -32,6 +36,8 @@ class StockOutModel {
         'kg': kg,
         'pcs': pcs,
         'harga': harga,
+        'ppn': ppn,
+        'restitusi': restitusi,
         'total': total,
         'tanggal': tanggal,
       };
@@ -49,6 +55,8 @@ class StockOutModel {
       kg: (m['kg'] ?? 0.0).toDouble(),
       pcs: m['pcs'] ?? 0,
       harga: (m['harga'] ?? 0.0).toDouble(),
+      ppn: (m['ppn'] ?? 0.0).toDouble(),
+      restitusi: (m['restitusi'] ?? 0.0).toDouble(),
       total: (m['total'] ?? 0.0).toDouble(),
       tanggal: m['tanggal'] ?? '',
     );
