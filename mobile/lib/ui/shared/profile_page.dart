@@ -11,12 +11,13 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final _newPass = TextEditingController();
   final _confirmPass = TextEditingController();
+  bool _loading = false;
 
-  void _showNotif(String msg) {
+  void _showNotif(String msg, {Color color = Colors.green}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
-        backgroundColor: Colors.green,
+        backgroundColor: color,
         behavior: SnackBarBehavior.floating,
         margin: EdgeInsets.only(top: 20, left: 20, right: 20, bottom: MediaQuery.of(context).size.height - 120),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -27,7 +28,6 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
-    // Menghapus spasi pada username
     final cleanUsername = (user?.username ?? '-').replaceAll(' ', '');
 
     return Scaffold(
@@ -36,7 +36,6 @@ class _ProfilePageState extends State<ProfilePage> {
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            // Foto Profil & Upload
             Center(
               child: Stack(
                 children: [
@@ -62,7 +61,6 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             const SizedBox(height: 32),
             
-            // Read-Only Form
             _buildReadOnlyField('ID Account', user?.id ?? '-'),
             const SizedBox(height: 16),
             _buildReadOnlyField('Email', user?.email ?? '-'),
@@ -73,7 +71,6 @@ class _ProfilePageState extends State<ProfilePage> {
             const Divider(),
             const SizedBox(height: 20),
             
-            // Ganti Sandi (Hanya 2 Input)
             const Align(
               alignment: Alignment.centerLeft,
               child: Text('Ganti Sandi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -94,16 +91,27 @@ class _ProfilePageState extends State<ProfilePage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  if (_newPass.text != _confirmPass.text) {
-                    _showNotif('Sandi baru tidak cocok!');
+                onPressed: _loading ? null : () async {
+                  if (_newPass.text.isEmpty || _newPass.text != _confirmPass.text) {
+                    _showNotif('Sandi baru tidak cocok atau kosong!', color: Colors.red);
                     return;
                   }
-                  _showNotif('Sandi berhasil diubah (Simulasi)');
-                  _newPass.clear();
-                  _confirmPass.clear();
+                  setState(() => _loading = true);
+                  final err = await context.read<AuthProvider>().changePassword(_newPass.text);
+                  if (mounted) {
+                    setState(() => _loading = false);
+                    if (err == null) {
+                      _showNotif('Sandi berhasil diubah!');
+                      _newPass.clear();
+                      _confirmPass.clear();
+                    } else {
+                      _showNotif(err, color: Colors.red);
+                    }
+                  }
                 },
-                child: const Text('Simpan Sandi Baru'),
+                child: _loading 
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text('Simpan Sandi Baru'),
               ),
             ),
           ],
@@ -112,10 +120,11 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  // Fix Memory Leak: Menggunakan TextFormField(initialValue) bukan TextEditingController baru
   Widget _buildReadOnlyField(String label, String value) {
-    return TextField(
-      enabled: false,
-      controller: TextEditingController(text: value),
+    return TextFormField(
+      initialValue: value,
+      readOnly: true,
       decoration: InputDecoration(
         labelText: label,
         filled: true,
