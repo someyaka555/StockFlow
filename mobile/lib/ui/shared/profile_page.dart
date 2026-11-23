@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/ui_helpers.dart';
 import '../../providers/auth_provider.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -12,18 +13,6 @@ class _ProfilePageState extends State<ProfilePage> {
   final _newPass = TextEditingController();
   final _confirmPass = TextEditingController();
   bool _loading = false;
-
-  void _showNotif(String msg, {Color color = Colors.green}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
-        backgroundColor: color,
-        behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.only(top: 20, left: 20, right: 20, bottom: MediaQuery.of(context).size.height - 120),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +41,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       backgroundColor: Colors.blue,
                       child: IconButton(
                         icon: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
-                        onPressed: () => _showNotif('Fitur upload foto (Simulasi)'),
+                        onPressed: () => AppSnackBar.success(context, 'Fitur upload foto (Simulasi)'),
                       ),
                     ),
                   ),
@@ -93,7 +82,7 @@ class _ProfilePageState extends State<ProfilePage> {
               child: ElevatedButton(
                 onPressed: _loading ? null : () async {
                   if (_newPass.text.isEmpty || _newPass.text != _confirmPass.text) {
-                    _showNotif('Sandi baru tidak cocok atau kosong!', color: Colors.red);
+                    AppSnackBar.error(context, 'Sandi baru tidak cocok atau kosong!');
                     return;
                   }
                   setState(() => _loading = true);
@@ -101,11 +90,11 @@ class _ProfilePageState extends State<ProfilePage> {
                   if (mounted) {
                     setState(() => _loading = false);
                     if (err == null) {
-                      _showNotif('Sandi berhasil diubah!');
+                      AppSnackBar.success(context, 'Sandi berhasil diubah!');
                       _newPass.clear();
                       _confirmPass.clear();
                     } else {
-                      _showNotif(err, color: Colors.red);
+                      AppSnackBar.error(context, err);
                     }
                   }
                 },
@@ -120,7 +109,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // Fix Memory Leak: Menggunakan TextFormField(initialValue) bukan TextEditingController baru
   Widget _buildReadOnlyField(String label, String value) {
     return TextFormField(
       initialValue: value,
