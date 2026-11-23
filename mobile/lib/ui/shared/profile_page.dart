@@ -9,58 +9,60 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final _username = TextEditingController();
-  final _email = TextEditingController();
-  final _oldPass = TextEditingController();
   final _newPass = TextEditingController();
 
   @override
-  void initState() {
-    super.initState();
-    final user = context.read<AuthProvider>().user;
-    _username.text = user?.username ?? '';
-    _email.text = user?.email ?? '';
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Profil Saya')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Data Diri', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _username,
-              decoration: const InputDecoration(labelText: 'Nama Lengkap', prefixIcon: Icon(Icons.person)),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _email,
-              decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email)),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profil disimpan (Simulasi)')));
-                },
-                child: const Text('Simpan Profil'),
+            // Foto Profil & Upload
+            Center(
+              child: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.grey[300],
+                    child: const Icon(Icons.person, size: 60, color: Colors.grey),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: CircleAvatar(
+                      radius: 18,
+                      backgroundColor: Colors.blue,
+                      child: IconButton(
+                        icon: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fitur upload foto (Simulasi)')));
+                        },
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
+            const SizedBox(height: 16),
+            // ID Account
+            Text('ID: ${user?.id ?? '-'}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            const SizedBox(height: 4),
+            // Username & Email
+            Text(user?.username ?? '-', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(user?.email ?? '-', style: const TextStyle(color: Colors.grey)),
             
-            const Divider(height: 40),
+            const SizedBox(height: 32),
+            const Divider(),
+            const SizedBox(height: 16),
             
-            const Text('Ganti Sandi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _oldPass,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Sandi Lama', prefixIcon: Icon(Icons.lock)),
+            // Ganti Sandi
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Ganti Sandi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -68,12 +70,13 @@ class _ProfilePageState extends State<ProfilePage> {
               obscureText: true,
               decoration: const InputDecoration(labelText: 'Sandi Baru', prefixIcon: Icon(Icons.lock_outline)),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sandi berhasil diubah (Simulasi)')));
+                  _newPass.clear();
                 },
                 child: const Text('Simpan Sandi Baru'),
               ),
