@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart'; // Import kDebugMode
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme.dart';
@@ -93,6 +94,27 @@ class _LoginPageState extends State<LoginPage> {
                         : const Text('Masuk'),
                   ),
                 ),
+                // Hint Akun Tester
+                if (kDebugMode) ...[
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber.withOpacity(0.5)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text('Akun Tester (Local)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        SizedBox(height: 4),
+                        Text('Admin : admin@stockflow.com / admin123', style: TextStyle(fontSize: 11)),
+                        Text('User  : user@stockflow.com / user123', style: TextStyle(fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
