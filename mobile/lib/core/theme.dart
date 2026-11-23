@@ -21,7 +21,6 @@ class AppTheme {
           elevation: 0,
           centerTitle: false,
         ),
-        // PERBAIKAN: Menggunakan CardTheme untuk Flutter 3.22.0
         cardTheme: CardTheme(
           elevation: 1,
           color: Colors.white,
