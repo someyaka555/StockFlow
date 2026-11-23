@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/constants.dart';
 import '../data/models/user.dart';
 import '../data/repositories/auth_repository.dart';
 
@@ -19,19 +20,25 @@ class AuthProvider extends ChangeNotifier {
   Future<void> init() async {
     _user = await _repo.getCurrentUser();
     _adminMode = _user?.role == UserRole.admin;
+    
+    // Tentukan mode berdasarkan email
+    if (_user != null) {
+      AppConstants.authMode = (_user!.email == 'admin@stockflow.com' || _user!.email == 'user@stockflow.com') ? 'local' : 'server';
+    }
+    
     _loading = false;
     notifyListeners();
   }
 
   Future<String?> login(String email, String password) async {
     try {
+      // Tentukan mode SEBELUM login
+      AppConstants.authMode = (email == 'admin@stockflow.com' || email == 'user@stockflow.com') ? 'local' : 'server';
+      
       final u = await _repo.login(email, password);
       if (u == null) return 'Email tidak terdaftar atau password salah';
       
-      // Pengecekan Blokir
-      if (u.isBlocked) {
-        return 'Akun Anda telah diblokir. Hubungi Admin.';
-      }
+      if (u.isBlocked) return 'Akun Anda telah diblokir. Hubungi Admin.';
       
       _user = u;
       _adminMode = u.role == UserRole.admin;
