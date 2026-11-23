@@ -88,7 +88,7 @@ class AuthProvider extends ChangeNotifier {
   Future<String?> changePassword(String newPassword) async {
     if (_user == null) return 'User tidak ditemukan';
     if (AppConstants.authMode == 'server') {
-      return 'Fitur ganti sandi belum tersedia untuk akun server'; // Atau implementasikan API call
+      return 'Fitur ganti sandi belum tersedia untuk akun server';
     }
     try {
       await _repo.updateLocalPassword(_user!.email, newPassword);
