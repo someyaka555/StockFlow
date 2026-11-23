@@ -1,20 +1,32 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/constants.dart';
 import '../api/api_client.dart';
 import '../models/user.dart';
 
 class AuthRepository {
   bool _isLocalAccount(String email) {
-    return email == 'admin@stockflow.com' || email == 'user@stockflow.com';
+    return email == AppConstants.localAdminEmail || email == AppConstants.localUserEmail;
+  }
+
+  Future<String> _getLocalPassword(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (email == AppConstants.localAdminEmail) {
+      return prefs.getString('local_admin_password') ?? AppConstants.localAdminPassword;
+    } else {
+      return prefs.getString('local_user_password') ?? AppConstants.localUserPassword;
+    }
   }
 
   Future<UserModel?> login(String email, String password) async {
     if (_isLocalAccount(email)) {
-      if (email == 'admin@stockflow.com') {
+      final expectedPassword = await _getLocalPassword(email);
+      if (password != expectedPassword) return null;
+
+      if (email == AppConstants.localAdminEmail) {
         return UserModel(id: 'local-admin', username: 'AdminLocal', email: email, role: UserRole.admin, isVerified: true);
-      } else if (email == 'user@stockflow.com') {
+      } else {
         return UserModel(id: 'local-user', username: 'UserLocal', email: email, role: UserRole.user, isVerified: true);
       }
-      return null;
     } else {
       final res = await ApiClient().dio.post('/auth/login', data: {
         'email': email,
@@ -32,8 +44,8 @@ class AuthRepository {
     final id = prefs.getString('mock_user_id');
     final token = prefs.getString('auth_token');
 
-    if (id == 'local-admin') return UserModel(id: 'local-admin', username: 'AdminLocal', email: 'admin@stockflow.com', role: UserRole.admin, isVerified: true);
-    if (id == 'local-user') return UserModel(id: 'local-user', username: 'UserLocal', email: 'user@stockflow.com', role: UserRole.user, isVerified: true);
+    if (id == 'local-admin') return UserModel(id: 'local-admin', username: 'AdminLocal', email: AppConstants.localAdminEmail, role: UserRole.admin, isVerified: true);
+    if (id == 'local-user') return UserModel(id: 'local-user', username: 'UserLocal', email: AppConstants.localUserEmail, role: UserRole.user, isVerified: true);
 
     if (token != null) {
       try {
@@ -55,5 +67,14 @@ class AuthRepository {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
     await prefs.remove('mock_user_id');
+  }
+
+  Future<void> updateLocalPassword(String email, String newPassword) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (email == AppConstants.localAdminEmail) {
+      await prefs.setString('local_admin_password', newPassword);
+    } else if (email == AppConstants.localUserEmail) {
+      await prefs.setString('local_user_password', newPassword);
+    }
   }
 }
