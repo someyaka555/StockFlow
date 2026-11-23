@@ -1,4 +1,4 @@
-import '../../core/constants.dart'; // <-- TAMBAHKAN INI
+import '../../core/constants.dart';
 import '../api/api_client.dart';
 import '../models/client.dart';
 
@@ -16,9 +16,7 @@ class ClientRepository {
 
   Future<void> create(ClientModel client) async {
     if (AppConstants.authMode == 'local') {
-      _mockClients.add(ClientModel(
-        id: 'c${_mockClients.length + 1}', nama: client.nama, kontak: client.kontak, alamat: client.alamat, saldo: client.saldo,
-      ));
+      _mockClients.add(ClientModel(id: 'c${_mockClients.length + 1}', nama: client.nama, kontak: client.kontak, alamat: client.alamat, saldo: client.saldo));
       return;
     }
     await ApiClient().dio.post('/clients', data: client.toJson());

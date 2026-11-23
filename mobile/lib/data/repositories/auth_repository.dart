@@ -3,14 +3,12 @@ import '../api/api_client.dart';
 import '../models/user.dart';
 
 class AuthRepository {
-  // Fungsi helper untuk cek apakah akun ini lokal (tester) atau server
   bool _isLocalAccount(String email) {
     return email == 'admin@stockflow.com' || email == 'user@stockflow.com';
   }
 
   Future<UserModel?> login(String email, String password) async {
     if (_isLocalAccount(email)) {
-      // === LOGIKA LOKAL (MOCK) ===
       if (email == 'admin@stockflow.com') {
         return UserModel(id: 'local-admin', username: 'AdminLocal', email: email, role: UserRole.admin, isVerified: true);
       } else if (email == 'user@stockflow.com') {
@@ -18,7 +16,6 @@ class AuthRepository {
       }
       return null;
     } else {
-      // === LOGIKA SERVER (API) ===
       final res = await ApiClient().dio.post('/auth/login', data: {
         'email': email,
         'password': password,
@@ -35,11 +32,9 @@ class AuthRepository {
     final id = prefs.getString('mock_user_id');
     final token = prefs.getString('auth_token');
 
-    // Cek Local Session
     if (id == 'local-admin') return UserModel(id: 'local-admin', username: 'AdminLocal', email: 'admin@stockflow.com', role: UserRole.admin, isVerified: true);
     if (id == 'local-user') return UserModel(id: 'local-user', username: 'UserLocal', email: 'user@stockflow.com', role: UserRole.user, isVerified: true);
 
-    // Cek API Session
     if (token != null) {
       try {
         final res = await ApiClient().dio.get('/auth/me');

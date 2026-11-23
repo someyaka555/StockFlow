@@ -1,4 +1,4 @@
-import '../../core/constants.dart'; // <-- TAMBAHKAN INI
+import '../../core/constants.dart';
 import '../api/api_client.dart';
 import '../models/product.dart';
 
@@ -16,9 +16,7 @@ class ProductRepository {
 
   Future<void> create(ProductModel p) async {
     if (AppConstants.authMode == 'local') {
-      _mock.add(ProductModel(
-        id: 'p${_mock.length + 1}', nama: p.nama, deskripsi: p.deskripsi, kg: p.kg, harga: p.harga, stokTotal: p.stokTotal,
-      ));
+      _mock.add(ProductModel(id: 'p${_mock.length + 1}', nama: p.nama, deskripsi: p.deskripsi, kg: p.kg, harga: p.harga, stokTotal: p.stokTotal));
       return;
     }
     await ApiClient().dio.post('/products', data: p.toJson());

@@ -2,17 +2,14 @@ import '../api/api_client.dart';
 import '../models/user.dart';
 
 class UserRepository {
-  // Cek apakah harus pakai data lokal (berdasarkan email target)
   bool _isLocal(String email) => email == 'admin@stockflow.com' || email == 'user@stockflow.com';
 
-  // Mock list untuk mode lokal
   static final List<UserModel> _mockUsers = [
     UserModel(id: 'local-admin', username: 'AdminLocal', email: 'admin@stockflow.com', role: UserRole.admin, isVerified: true),
     UserModel(id: 'local-user', username: 'UserLocal', email: 'user@stockflow.com', role: UserRole.user, isVerified: true),
   ];
 
   Future<List<UserModel>> getAll() async {
-    // Untuk tester, selalu tampilkan mock list ini
     return _mockUsers;
   }
 
