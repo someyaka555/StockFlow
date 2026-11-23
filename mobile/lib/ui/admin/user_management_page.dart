@@ -21,9 +21,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
 
   Future<void> _load() async {
     setState(() => _loading = true);
-    try {
-      _items = await _repo.getAll();
-    } catch (_) {}
+    try { _items = await _repo.getAll(); } catch (_) {}
     setState(() => _loading = false);
   }
 
@@ -33,13 +31,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
         content: Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
-        // PERBAIKAN: Hapus kata 'const' di sini
-        margin: EdgeInsets.only(
-          top: 20, 
-          left: 20, 
-          right: 20, 
-          bottom: MediaQuery.of(context).size.height - 120
-        ),
+        margin: EdgeInsets.only(top: 20, left: 20, right: 20, bottom: MediaQuery.of(context).size.height - 120),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
@@ -67,20 +59,14 @@ class _UserManagementPageState extends State<UserManagementPage> {
                     ),
                     title: Text(
                       u.username.replaceAll(' ', ''), 
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        decoration: u.isBlocked ? TextDecoration.lineThrough : null,
-                      )
+                      style: TextStyle(fontWeight: FontWeight.bold, decoration: u.isBlocked ? TextDecoration.lineThrough : null)
                     ),
                     subtitle: Text('${u.email} • ${u.role.name}'),
                     trailing: PopupMenuButton<String>(
                       icon: const Icon(Icons.more_vert),
                       onSelected: (value) async {
-                        if (value == 'detail') {
-                          _showDetailDialog(u);
-                        } else if (value == 'delete') {
-                          _deleteUser(u);
-                        }
+                        if (value == 'detail') _showDetailDialog(u);
+                        if (value == 'delete') _deleteUser(u);
                       },
                       itemBuilder: (_) => [
                         const PopupMenuItem(value: 'detail', child: Text('Detail')),
@@ -96,7 +82,6 @@ class _UserManagementPageState extends State<UserManagementPage> {
 
   void _showDetailDialog(UserModel u) async {
     bool isObscure = true;
-    
     await showDialog(
       context: context,
       builder: (_) => StatefulBuilder(
@@ -122,10 +107,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                     children: [
                       const Text('Sandi: ', style: TextStyle(color: Colors.grey, fontSize: 12)),
                       Expanded(
-                        child: Text(
-                          isObscure ? '••••••••' : 'password123',
-                          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
-                        ),
+                        child: Text(isObscure ? '••••••••' : 'password123', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
                       ),
                       IconButton(
                         icon: Icon(isObscure ? Icons.visibility_off : Icons.visibility, size: 20),
@@ -138,32 +120,18 @@ class _UserManagementPageState extends State<UserManagementPage> {
                     title: const Text('Blokir User', style: TextStyle(fontSize: 14)),
                     value: u.isBlocked,
                     onChanged: (val) async {
-                      final updated = UserModel(
-                        id: u.id, username: u.username, email: u.email, 
-                        role: u.role, isVerified: u.isVerified, isBlocked: val
-                      );
+                      final updated = UserModel(id: u.id, username: u.username, email: u.email, role: u.role, isVerified: u.isVerified, isBlocked: val);
                       await _repo.update(updated);
-                      if (mounted) {
-                        Navigator.pop(ctx);
-                        _load();
-                        _showNotif(val ? 'User diblokir' : 'Blokir dibuka');
-                      }
+                      if (mounted) { Navigator.pop(ctx); _load(); _showNotif(val ? 'User diblokir' : 'Blokir dibuka'); }
                     },
                   ),
                   SwitchListTile(
                     title: const Text('Jadikan Admin', style: TextStyle(fontSize: 14)),
                     value: u.role == UserRole.admin,
                     onChanged: (val) async {
-                      final updated = UserModel(
-                        id: u.id, username: u.username, email: u.email, 
-                        role: val ? UserRole.admin : UserRole.user, isVerified: u.isVerified, isBlocked: u.isBlocked
-                      );
+                      final updated = UserModel(id: u.id, username: u.username, email: u.email, role: val ? UserRole.admin : UserRole.user, isVerified: u.isVerified, isBlocked: u.isBlocked);
                       await _repo.update(updated);
-                      if (mounted) {
-                        Navigator.pop(ctx);
-                        _load();
-                        _showNotif(val ? 'Jadi Admin' : 'Jadi User');
-                      }
+                      if (mounted) { Navigator.pop(ctx); _load(); _showNotif(val ? 'Jadi Admin' : 'Jadi User'); }
                     },
                   ),
                   const SizedBox(height: 16),

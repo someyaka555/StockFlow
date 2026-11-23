@@ -47,8 +47,8 @@ class _SettingsPageState extends State<SettingsPage> {
                         content: const Text('Pengaturan API disimpan', textAlign: TextAlign.center, style: TextStyle(color: Colors.white)),
                         backgroundColor: Colors.green,
                         behavior: SnackBarBehavior.floating,
-                        // PERHATIKAN: Tidak ada 'const' di sini
-                        margin: const EdgeInsets.only(top: 20, left: 20, right: 20, bottom: 0),
+                        margin: EdgeInsets.only(top: 20, left: 20, right: 20, bottom: MediaQuery.of(context).size.height - 120),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     );
                   }
