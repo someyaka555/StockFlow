@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/ui_helpers.dart';
 import '../../providers/settings_provider.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -41,17 +42,7 @@ class _SettingsPageState extends State<SettingsPage> {
               child: ElevatedButton(
                 onPressed: () async {
                   await context.read<SettingsProvider>().save(_url.text.trim());
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('Pengaturan API disimpan', textAlign: TextAlign.center, style: TextStyle(color: Colors.white)),
-                        backgroundColor: Colors.green,
-                        behavior: SnackBarBehavior.floating,
-                        margin: EdgeInsets.only(top: 20, left: 20, right: 20, bottom: MediaQuery.of(context).size.height - 120),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                    );
-                  }
+                  if (mounted) AppSnackBar.success(context, 'Pengaturan API disimpan');
                 },
                 child: const Text('Simpan'),
               ),

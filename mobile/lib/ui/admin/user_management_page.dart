@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/ui_helpers.dart';
 import '../../data/models/user.dart';
 import '../../data/repositories/user_repository.dart';
 
@@ -23,18 +24,6 @@ class _UserManagementPageState extends State<UserManagementPage> {
     setState(() => _loading = true);
     try { _items = await _repo.getAll(); } catch (_) {}
     setState(() => _loading = false);
-  }
-
-  void _showNotif(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.only(top: 20, left: 20, right: 20, bottom: MediaQuery.of(context).size.height - 120),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
   }
 
   @override
@@ -89,7 +78,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 500),
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -122,7 +111,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                     onChanged: (val) async {
                       final updated = UserModel(id: u.id, username: u.username, email: u.email, role: u.role, isVerified: u.isVerified, isBlocked: val);
                       await _repo.update(updated);
-                      if (mounted) { Navigator.pop(ctx); _load(); _showNotif(val ? 'User diblokir' : 'Blokir dibuka'); }
+                      if (mounted) { Navigator.pop(ctx); _load(); AppSnackBar.success(context, val ? 'User diblokir' : 'Blokir dibuka'); }
                     },
                   ),
                   SwitchListTile(
@@ -131,7 +120,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                     onChanged: (val) async {
                       final updated = UserModel(id: u.id, username: u.username, email: u.email, role: val ? UserRole.admin : UserRole.user, isVerified: u.isVerified, isBlocked: u.isBlocked);
                       await _repo.update(updated);
-                      if (mounted) { Navigator.pop(ctx); _load(); _showNotif(val ? 'Jadi Admin' : 'Jadi User'); }
+                      if (mounted) { Navigator.pop(ctx); _load(); AppSnackBar.success(context, val ? 'Jadi Admin' : 'Jadi User'); }
                     },
                   ),
                   const SizedBox(height: 16),
@@ -174,7 +163,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
     if (confirm == true && u.id != null) {
       await _repo.delete(u.id!);
       _load();
-      if (mounted) _showNotif('User berhasil dihapus');
+      if (mounted) AppSnackBar.success(context, 'User berhasil dihapus');
     }
   }
 }
