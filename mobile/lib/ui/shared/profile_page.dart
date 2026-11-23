@@ -9,11 +9,15 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  final _oldPass = TextEditingController();
   final _newPass = TextEditingController();
+  final _confirmPass = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
+    // Menghapus spasi pada username
+    final cleanUsername = (user?.username ?? '-').replaceAll(' ', '');
 
     return Scaffold(
       appBar: AppBar(title: const Text('Profil Saya')),
@@ -47,13 +51,14 @@ class _ProfilePageState extends State<ProfilePage> {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-            // ID Account
-            Text('ID: ${user?.id ?? '-'}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
-            const SizedBox(height: 4),
-            // Username & Email
-            Text(user?.username ?? '-', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            Text(user?.email ?? '-', style: const TextStyle(color: Colors.grey)),
+            const SizedBox(height: 24),
+            
+            // Read-Only Form
+            _buildReadOnlyField('ID Account', user?.id ?? '-'),
+            const SizedBox(height: 12),
+            _buildReadOnlyField('Email', user?.email ?? '-'),
+            const SizedBox(height: 12),
+            _buildReadOnlyField('Username', cleanUsername),
             
             const SizedBox(height: 32),
             const Divider(),
@@ -66,23 +71,55 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             const SizedBox(height: 12),
             TextField(
-              controller: _newPass,
+              controller: _oldPass,
               obscureText: true,
-              decoration: const InputDecoration(labelText: 'Sandi Baru', prefixIcon: Icon(Icons.lock_outline)),
+              decoration: const InputDecoration(labelText: 'Change Password', prefixIcon: Icon(Icons.lock_outline)),
             ),
             const SizedBox(height: 12),
+            TextField(
+              controller: _newPass,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'New Password', prefixIcon: Icon(Icons.lock_outline)),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _confirmPass,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'Confirm Password', prefixIcon: Icon(Icons.lock_outline)),
+            ),
+            const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
+                  if (_newPass.text != _confirmPass.text) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sandi baru tidak cocok!')));
+                    return;
+                  }
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sandi berhasil diubah (Simulasi)')));
+                  _oldPass.clear();
                   _newPass.clear();
+                  _confirmPass.clear();
                 },
                 child: const Text('Simpan Sandi Baru'),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildReadOnlyField(String label, String value) {
+    return TextField(
+      enabled: false,
+      controller: TextEditingController(text: value),
+      decoration: InputDecoration(
+        labelText: label,
+        filled: true,
+        fillColor: Colors.grey[100],
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     );
   }
