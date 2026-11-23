@@ -21,9 +21,8 @@ class AuthProvider extends ChangeNotifier {
     _user = await _repo.getCurrentUser();
     _adminMode = _user?.role == UserRole.admin;
     
-    // Tentukan mode berdasarkan email
     if (_user != null) {
-      AppConstants.authMode = (_user!.email == 'admin@stockflow.com' || _user!.email == 'user@stockflow.com') ? 'local' : 'server';
+      AppConstants.authMode = (_user!.email == AppConstants.localAdminEmail || _user!.email == AppConstants.localUserEmail) ? 'local' : 'server';
     }
     
     _loading = false;
@@ -32,8 +31,7 @@ class AuthProvider extends ChangeNotifier {
 
   Future<String?> login(String email, String password) async {
     try {
-      // Tentukan mode SEBELUM login
-      AppConstants.authMode = (email == 'admin@stockflow.com' || email == 'user@stockflow.com') ? 'local' : 'server';
+      AppConstants.authMode = (email == AppConstants.localAdminEmail || email == AppConstants.localUserEmail) ? 'local' : 'server';
       
       final u = await _repo.login(email, password);
       if (u == null) return 'Email tidak terdaftar atau password salah';
@@ -85,5 +83,18 @@ class AuthProvider extends ChangeNotifier {
     if (!isAdmin) return;
     _adminMode = !_adminMode;
     notifyListeners();
+  }
+
+  Future<String?> changePassword(String newPassword) async {
+    if (_user == null) return 'User tidak ditemukan';
+    if (AppConstants.authMode == 'server') {
+      return 'Fitur ganti sandi belum tersedia untuk akun server'; // Atau implementasikan API call
+    }
+    try {
+      await _repo.updateLocalPassword(_user!.email, newPassword);
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
   }
 }
