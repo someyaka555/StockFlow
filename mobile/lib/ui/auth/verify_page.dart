@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/constants.dart';
 import '../../providers/auth_provider.dart';
 
 class VerifyPage extends StatefulWidget {
@@ -25,14 +24,12 @@ class _VerifyPageState extends State<VerifyPage> {
             TextField(
               controller: _code, 
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                hintText: 'Masukkan kode (Tester: ${AppConstants.mockOtpCode})'
-              )
+              decoration: const InputDecoration(hintText: 'Masukkan kode (Tester: 0000)')
             ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
-                if (_code.text == AppConstants.mockOtpCode) {
+                if (_code.text == '0000') {
                   context.read<AuthProvider>().verifySuccess();
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kode salah')));
@@ -42,9 +39,7 @@ class _VerifyPageState extends State<VerifyPage> {
             ),
             TextButton(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Kode baru telah dikirim (Tester: ${AppConstants.mockOtpCode})'))
-                );
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kode baru telah dikirim (Tester: 0000)')));
               },
               child: const Text('Kirim Ulang Kode (Resend)'),
             )
