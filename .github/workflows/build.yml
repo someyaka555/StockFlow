@@ -46,7 +46,7 @@ jobs:
           }
           EOF
 
-      # 3. Timpa build.gradle dengan konfigurasi Release
+      # 3. Timpa build.gradle dengan konfigurasi Release (SINTAKS MODERN)
       - name: Inject Release Signing
         working-directory: ./mobile/android
         run: |
@@ -61,22 +61,28 @@ jobs:
               id "kotlin-android"
               id "dev.flutter.flutter-gradle-plugin"
           }
+
           def localProperties = new Properties()
           def localPropertiesFile = rootProject.file('local.properties')
           if (localPropertiesFile.exists()) {
               localPropertiesFile.withReader('UTF-8') { reader -> localProperties.load(reader) }
           }
+
           def flutterVersionCode = localProperties.getProperty('flutter.versionCode') ?: '1'
           def flutterVersionName = localProperties.getProperty('flutter.versionName') ?: '1.0'
+
           def keystoreProperties = new Properties()
           def keystorePropertiesFile = rootProject.file('key.properties')
           if (keystorePropertiesFile.exists()) {
               keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
           }
+
           android {
               namespace "com.stockflow.app"
-              compileSdkVersion flutter.compileSdkVersion
+              // PERBAIKAN: Gunakan sintaks yang benar untuk Flutter 3.22.0
+              compileSdk 34
               ndkVersion flutter.ndkVersion
+              
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_1_8
                   targetCompatibility JavaVersion.VERSION_1_8
@@ -89,8 +95,8 @@ jobs:
               }
               defaultConfig {
                   applicationId "com.stockflow.app"
-                  minSdkVersion flutter.minSdkVersion
-                  targetSdkVersion flutter.targetSdkVersion
+                  minSdk 21
+                  targetSdk 34
                   versionCode flutterVersionCode.toInteger()
                   versionName flutterVersionName
               }
@@ -116,16 +122,16 @@ jobs:
                   }
               }
           }
+
           flutter {
               source '../..'
           }
           EOF
 
-      # 4. SETUP MAVEN MIRROR & ANDROID X (Mengatasi Error 429 & AndroidX)
+      # 4. SETUP MAVEN MIRROR & ANDROID X
       - name: Setup Maven Mirror and AndroidX
         working-directory: ./mobile/android
         run: |
-          # Membuat file init.gradle untuk mirror
           cat > init.gradle << 'EOF'
           allprojects {
               buildscript {
@@ -141,7 +147,6 @@ jobs:
               }
           }
           EOF
-          # TAMBAHKAN BARIS INI UNTUK MEMAKSA ANDROID X AKTIF
           echo "org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8" > gradle.properties
           echo "org.gradle.parallel=true" >> gradle.properties
           echo "android.useAndroidX=true" >> gradle.properties
