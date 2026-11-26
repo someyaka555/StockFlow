@@ -6,6 +6,8 @@ import '../../data/models/product.dart';
 import '../../data/models/stock_in.dart';
 import '../../data/repositories/product_repository.dart';
 import '../../data/repositories/stock_repository.dart';
+// TAMBAHKAN IMPORT INI
+import 'laporan_stock_in_page.dart'; 
 
 class StockInPage extends StatefulWidget {
   const StockInPage({super.key});
@@ -34,7 +36,19 @@ class _StockInPageState extends State<StockInPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Barang Masuk')),
+      appBar: AppBar(
+        title: const Text('Barang Masuk'),
+        // TAMBAHKAN BAGIAN INI UNTUK TOMBOL LAPORAN
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            tooltip: 'Cek Laporan',
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const LaporanStockInPage()));
+            },
+          )
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showFormBottomSheet(),
         icon: const Icon(Icons.add),
@@ -66,7 +80,6 @@ class _StockInPageState extends State<StockInPage> {
     );
   }
 
-  // REDESIGN UI KARTU (Tugas #17)
   Widget _buildNotaCard(StockInModel it) {
     return Card(
       elevation: 2,
@@ -137,7 +150,6 @@ class _StockInPageState extends State<StockInPage> {
         ],
       ),
     );
-    // FIX BUG DELETE (Tugas #14): Panggil pop dan muat ulang dengan benar
     if (confirm == true && s.id != null) {
       await _repo.deleteStockIn(s.id!);
       await _load();
@@ -173,7 +185,6 @@ class _StockInPageState extends State<StockInPage> {
                 Text(stockIn == null ? 'Tambah Barang Masuk' : 'Edit Barang Masuk', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
                 const SizedBox(height: 20),
                 
-                // FIX LAYOUT (Tugas #16): LayoutBuilder untuk Autocomplete
                 LayoutBuilder(
                   builder: (context, constraints) => Autocomplete<String>(
                     initialValue: TextEditingValue(text: selAsal ?? ''),
@@ -232,7 +243,6 @@ class _StockInPageState extends State<StockInPage> {
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // FITUR EDIT ITEM (Tugas #13)
                             IconButton(
                               icon: const Icon(Icons.edit, color: Colors.blue),
                               onPressed: () async {
@@ -299,7 +309,6 @@ class _StockInPageState extends State<StockInPage> {
                         await _load();
                         if (mounted) AppSnackBar.success(context, stockIn == null ? 'Berhasil ditambah' : 'Berhasil diubah');
                       },
-                      // UBAH TEXT TOMBOL (Tugas #11)
                       child: const Text('Simpan'),
                     ),
                   ],
@@ -312,7 +321,6 @@ class _StockInPageState extends State<StockInPage> {
     );
   }
 
-  // DIALOG ADD/EDIT PRODUK (Tugas #12 & #13)
   Future<void> _showAddProductDialog(BuildContext parentCtx, List<ProductModel> products, Function(StockInItem) onAdd, {StockInItem? initialItem}) async {
     ProductModel? selProduct = initialItem != null ? products.firstWhere((p) => p.id == initialItem.productId, orElse: () => products.first) : null;
     final kg = TextEditingController(text: initialItem != null ? Helpers.formatNumber(initialItem.kg) : '');
@@ -326,7 +334,6 @@ class _StockInPageState extends State<StockInPage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // INPUT MANUAL / AUTOCOMPLETE (Tugas #12)
               LayoutBuilder(
                 builder: (context, constraints) => Autocomplete<ProductModel>(
                   initialValue: TextEditingValue(text: selProduct?.nama ?? ''),
@@ -345,7 +352,6 @@ class _StockInPageState extends State<StockInPage> {
                     controller: ctrl, focusNode: fn,
                     decoration: const InputDecoration(labelText: 'Cari / Ketik Nama Produk'),
                     onChanged: (text) {
-                      // Jika user mengetik manual, set selProduct ke null (anggap produk baru)
                       if (selProduct != null && selProduct!.nama != text) {
                         setS(() => selProduct = null);
                       }
@@ -396,20 +402,7 @@ class _StockInPageState extends State<StockInPage> {
                 String pId = selProduct?.id ?? '';
                 String pNama = selProduct?.nama ?? '';
 
-                // Jika produk baru diketik manual, simpan ke database lokal dulu
                 if (selProduct == null) {
-                  final finalName = (kg.text.isNotEmpty) ? 'Produk Baru' : ''; 
-                  // (Catatan: Autocomplete tidak menyimpan text manual secara default di variabel luar, 
-                  // solusi amannya kita butuh text controller yang bisa diakses. 
-                  // Tapi karena kita pakai Autocomplete, kita butuh trik khusus. 
-                  // Untuk simplifikasi, kita buat produk baru berdasarkan nama yang diketik).
-                  
-                  // Solusi: kita gunakan trik simpan text manual di onChanged.
-                  // Karena ini di dalam Dialog, kita asumsikan user memilih dari list ATAU 
-                  // kita tangkap input manual dari parameter fieldViewBuilder.
-                  
-                  // *Catatan untuk developer: Autocomplete manual input butuh TextEditingController stateful.
-                  // Agar tidak crash, kita pakai fallback ke produk pertama jika kosong*
                   final fallbackName = 'Produk Manual ${DateTime.now().second}';
                   final newProduct = ProductModel(
                     nama: fallbackName, deskripsi: '', kg: Helpers.parseNumber(kg.text), harga: 0, stokTotal: 0
