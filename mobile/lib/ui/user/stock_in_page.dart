@@ -25,7 +25,6 @@ class _StockInPageState extends State<StockInPage> with SingleTickerProviderStat
   bool _loading = true;
   late TabController _tabController;
 
-  // State Laporan
   final GlobalKey _reportGlobalKey = GlobalKey();
   String _selectedPeriod = 'Mingguan';
 
@@ -45,10 +44,8 @@ class _StockInPageState extends State<StockInPage> with SingleTickerProviderStat
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      // Ambil data transaksi harian
       _items = await _repo.getStockInByDate(DateFormat('yyyy-MM-dd').format(_date));
-      // Ambil SEMUA data untuk laporan (jangan difilter oleh tanggal awal)
-      _allReportData = await _repo.getStockInByDate(''); 
+      _allReportData = await _repo.getStockInByDate('');
     } catch (_) {}
     if (mounted) setState(() => _loading = false);
   }
@@ -228,7 +225,7 @@ class _StockInPageState extends State<StockInPage> with SingleTickerProviderStat
                     onChanged: (val) {
                       setState(() {
                         _selectedPeriod = val!;
-                        _load(); // Reload data saat filter diubah
+                        _load();
                       });
                     },
                   ),
@@ -576,11 +573,10 @@ class _StockInPageState extends State<StockInPage> with SingleTickerProviderStat
     );
   }
 
-  // DIALOG ADD/EDIT PRODUK (FIX BUG MANUAL INPUT)
+  // DIALOG ADD/EDIT PRODUK
   Future<void> _showAddProductDialog(BuildContext parentCtx, List<ProductModel> products, Function(StockInItem) onAdd, {StockInItem? initialItem}) async {
     ProductModel? selProduct = initialItem != null ? products.firstWhere((p) => p.id == initialItem.productId, orElse: () => products.first) : null;
     
-    // Controller untuk menangkap teks manual
     final nameCtrl = TextEditingController(text: selProduct?.nama ?? '');
     final kg = TextEditingController(text: initialItem != null ? Helpers.formatNumber(initialItem.kg) : '');
     final total = TextEditingController(text: initialItem?.total.toString() ?? '');
@@ -593,9 +589,11 @@ class _StockInPageState extends State<StockInPage> with SingleTickerProviderStat
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // MENGGUNAKAN RAW AUTOCOMPLETE AGAR SEARCH & MANUAL INPUT BERJALAN BERSAMAAN
               LayoutBuilder(
-                builder: (context, constraints) => Autocomplete<ProductModel>(
-                  initialValue: TextEditingValue(text: selProduct?.nama ?? ''),
+                builder: (context, constraints) => RawAutocomplete<ProductModel>(
+                  textEditingController: nameCtrl,
+                  focusNode: FocusNode(),
                   displayStringForOption: (p) => p.nama,
                   optionsBuilder: (TextEditingValue text) {
                     if (text.text.isEmpty) return products;
@@ -604,21 +602,23 @@ class _StockInPageState extends State<StockInPage> with SingleTickerProviderStat
                   onSelected: (p) {
                     setS(() { 
                       selProduct = p; 
-                      nameCtrl.text = p.nama;
-                      if (p != null) kg.text = Helpers.formatNumber(p.kg);
+                      nameCtrl.text = p.nama; // Update input teks
+                      kg.text = Helpers.formatNumber(p.kg); // Isi otomatis kg
                     });
                   },
-                  fieldViewBuilder: (ctx, ctrl, fn, onSubmit) => TextField(
-                    controller: nameCtrl,
-                    focusNode: fn,
-                    decoration: const InputDecoration(labelText: 'Cari / Ketik Nama Produk'),
-                    onChanged: (text) {
-                      // Jika user mengetik manual, selProduct di-null kan
-                      if (selProduct != null && selProduct!.nama != text) {
-                        setS(() => selProduct = null);
-                      }
-                    },
-                  ),
+                  fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                    return TextField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      decoration: const InputDecoration(labelText: 'Cari / Ketik Nama Produk'),
+                      onChanged: (text) {
+                        // Jika user mengetik manual dan teksnya beda dengan yang dipilih
+                        if (selProduct != null && selProduct!.nama != text) {
+                          setS(() => selProduct = null);
+                        }
+                      },
+                    );
+                  },
                   optionsViewBuilder: (context, onSelected, options) {
                     return Align(
                       alignment: Alignment.topLeft,
@@ -664,10 +664,10 @@ class _StockInPageState extends State<StockInPage> with SingleTickerProviderStat
                 String pId = selProduct?.id ?? '';
                 String pNama = selProduct?.nama ?? '';
                 
-                // FIX BUG MANUAL INPUT: Ambil nama dari TextEditingController
-                final manualName = nameCtrl.text.trim(); 
+                // Ambil teks manual dari input
+                final manualName = nameCtrl.text.trim();
 
-                // Jika produk baru diketik manual, simpan ke database lokal dulu
+                // Jika produk diketik manual, simpan ke database
                 if (selProduct == null) {
                   if (manualName.isEmpty) {
                     AppSnackBar.error(ctx, 'Nama produk tidak boleh kosong');
@@ -675,7 +675,7 @@ class _StockInPageState extends State<StockInPage> with SingleTickerProviderStat
                   }
                   
                   final newProduct = ProductModel(
-                    nama: manualName, // Gunakan nama yang diketik
+                    nama: manualName, // Gunakan nama asli yang diketik
                     deskripsi: '', 
                     kg: Helpers.parseNumber(kg.text), 
                     harga: 0, 
@@ -684,7 +684,7 @@ class _StockInPageState extends State<StockInPage> with SingleTickerProviderStat
                   
                   await ProductRepository().create(newProduct);
                   
-                  // Ambil data terbaru untuk mendapatkan ID
+                  // Ambil ID dari produk baru
                   final updatedProducts = await ProductRepository().getAll();
                   final createdProd = updatedProducts.firstWhere((p) => p.nama == manualName);
                   
