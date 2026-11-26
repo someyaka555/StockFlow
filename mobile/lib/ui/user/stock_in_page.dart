@@ -45,8 +45,10 @@ class _StockInPageState extends State<StockInPage> with SingleTickerProviderStat
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
+      // Ambil data transaksi harian
       _items = await _repo.getStockInByDate(DateFormat('yyyy-MM-dd').format(_date));
-      _allReportData = await _repo.getStockInByDate('');
+      // Ambil SEMUA data untuk laporan (jangan difilter oleh tanggal awal)
+      _allReportData = await _repo.getStockInByDate(''); 
     } catch (_) {}
     if (mounted) setState(() => _loading = false);
   }
@@ -91,8 +93,8 @@ class _StockInPageState extends State<StockInPage> with SingleTickerProviderStat
                 dividerColor: Colors.transparent,
                 indicatorSize: TabBarIndicatorSize.tab,
                 tabs: const [
-                  Tab(text: 'Transaksi'), // Nama Tab 1
-                  Tab(text: 'Laporan'),   // Nama Tab 2
+                  Tab(text: 'Transaksi'),
+                  Tab(text: 'Laporan'),
                 ],
               ),
             ),
@@ -226,13 +228,12 @@ class _StockInPageState extends State<StockInPage> with SingleTickerProviderStat
                     onChanged: (val) {
                       setState(() {
                         _selectedPeriod = val!;
-                        _load();
+                        _load(); // Reload data saat filter diubah
                       });
                     },
                   ),
                 ],
               ),
-              // Tombol Download khusus di Tab Laporan
               IconButton(
                 icon: const Icon(Icons.download, color: Colors.blue),
                 tooltip: 'Download Gambar',
@@ -575,8 +576,12 @@ class _StockInPageState extends State<StockInPage> with SingleTickerProviderStat
     );
   }
 
+  // DIALOG ADD/EDIT PRODUK (FIX BUG MANUAL INPUT)
   Future<void> _showAddProductDialog(BuildContext parentCtx, List<ProductModel> products, Function(StockInItem) onAdd, {StockInItem? initialItem}) async {
     ProductModel? selProduct = initialItem != null ? products.firstWhere((p) => p.id == initialItem.productId, orElse: () => products.first) : null;
+    
+    // Controller untuk menangkap teks manual
+    final nameCtrl = TextEditingController(text: selProduct?.nama ?? '');
     final kg = TextEditingController(text: initialItem != null ? Helpers.formatNumber(initialItem.kg) : '');
     final total = TextEditingController(text: initialItem?.total.toString() ?? '');
 
@@ -599,13 +604,16 @@ class _StockInPageState extends State<StockInPage> with SingleTickerProviderStat
                   onSelected: (p) {
                     setS(() { 
                       selProduct = p; 
+                      nameCtrl.text = p.nama;
                       if (p != null) kg.text = Helpers.formatNumber(p.kg);
                     });
                   },
                   fieldViewBuilder: (ctx, ctrl, fn, onSubmit) => TextField(
-                    controller: ctrl, focusNode: fn,
+                    controller: nameCtrl,
+                    focusNode: fn,
                     decoration: const InputDecoration(labelText: 'Cari / Ketik Nama Produk'),
                     onChanged: (text) {
+                      // Jika user mengetik manual, selProduct di-null kan
                       if (selProduct != null && selProduct!.nama != text) {
                         setS(() => selProduct = null);
                       }
@@ -655,16 +663,33 @@ class _StockInPageState extends State<StockInPage> with SingleTickerProviderStat
 
                 String pId = selProduct?.id ?? '';
                 String pNama = selProduct?.nama ?? '';
+                
+                // FIX BUG MANUAL INPUT: Ambil nama dari TextEditingController
+                final manualName = nameCtrl.text.trim(); 
 
+                // Jika produk baru diketik manual, simpan ke database lokal dulu
                 if (selProduct == null) {
-                  final fallbackName = 'Produk Manual ${DateTime.now().second}';
+                  if (manualName.isEmpty) {
+                    AppSnackBar.error(ctx, 'Nama produk tidak boleh kosong');
+                    return;
+                  }
+                  
                   final newProduct = ProductModel(
-                    nama: fallbackName, deskripsi: '', kg: Helpers.parseNumber(kg.text), harga: 0, stokTotal: 0
+                    nama: manualName, // Gunakan nama yang diketik
+                    deskripsi: '', 
+                    kg: Helpers.parseNumber(kg.text), 
+                    harga: 0, 
+                    stokTotal: 0
                   );
+                  
                   await ProductRepository().create(newProduct);
+                  
+                  // Ambil data terbaru untuk mendapatkan ID
                   final updatedProducts = await ProductRepository().getAll();
-                  pId = updatedProducts.last.id!;
-                  pNama = updatedProducts.last.nama;
+                  final createdProd = updatedProducts.firstWhere((p) => p.nama == manualName);
+                  
+                  pId = createdProd.id!;
+                  pNama = createdProd.nama;
                 }
 
                 onAdd(StockInItem(productId: pId, productNama: pNama, kg: Helpers.parseNumber(kg.text), total: t));
