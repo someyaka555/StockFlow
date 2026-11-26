@@ -573,11 +573,18 @@ class _StockInPageState extends State<StockInPage> with SingleTickerProviderStat
     );
   }
 
-  // DIALOG ADD/EDIT PRODUK
+  // DIALOG ADD/EDIT PRODUK (FIX EDIT NAME & SEARCH)
   Future<void> _showAddProductDialog(BuildContext parentCtx, List<ProductModel> products, Function(StockInItem) onAdd, {StockInItem? initialItem}) async {
-    ProductModel? selProduct = initialItem != null ? products.firstWhere((p) => p.id == initialItem.productId, orElse: () => products.first) : null;
+    ProductModel? selProduct;
+    if (initialItem != null) {
+      try {
+        selProduct = products.firstWhere((p) => p.id == initialItem.productId);
+      } catch (e) {
+        selProduct = null;
+      }
+    }
     
-    final nameCtrl = TextEditingController(text: selProduct?.nama ?? '');
+    final nameCtrl = TextEditingController(text: initialItem != null ? initialItem.productNama : '');
     final kg = TextEditingController(text: initialItem != null ? Helpers.formatNumber(initialItem.kg) : '');
     final total = TextEditingController(text: initialItem?.total.toString() ?? '');
 
@@ -589,7 +596,6 @@ class _StockInPageState extends State<StockInPage> with SingleTickerProviderStat
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // MENGGUNAKAN RAW AUTOCOMPLETE AGAR SEARCH & MANUAL INPUT BERJALAN BERSAMAAN
               LayoutBuilder(
                 builder: (context, constraints) => RawAutocomplete<ProductModel>(
                   textEditingController: nameCtrl,
@@ -602,8 +608,8 @@ class _StockInPageState extends State<StockInPage> with SingleTickerProviderStat
                   onSelected: (p) {
                     setS(() { 
                       selProduct = p; 
-                      nameCtrl.text = p.nama; // Update input teks
-                      kg.text = Helpers.formatNumber(p.kg); // Isi otomatis kg
+                      nameCtrl.text = p.nama;
+                      kg.text = Helpers.formatNumber(p.kg);
                     });
                   },
                   fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
@@ -612,7 +618,6 @@ class _StockInPageState extends State<StockInPage> with SingleTickerProviderStat
                       focusNode: focusNode,
                       decoration: const InputDecoration(labelText: 'Cari / Ketik Nama Produk'),
                       onChanged: (text) {
-                        // Jika user mengetik manual dan teksnya beda dengan yang dipilih
                         if (selProduct != null && selProduct!.nama != text) {
                           setS(() => selProduct = null);
                         }
@@ -663,33 +668,36 @@ class _StockInPageState extends State<StockInPage> with SingleTickerProviderStat
 
                 String pId = selProduct?.id ?? '';
                 String pNama = selProduct?.nama ?? '';
-                
-                // Ambil teks manual dari input
                 final manualName = nameCtrl.text.trim();
 
-                // Jika produk diketik manual, simpan ke database
-                if (selProduct == null) {
+                if (selProduct == null || pId.isEmpty) {
                   if (manualName.isEmpty) {
                     AppSnackBar.error(ctx, 'Nama produk tidak boleh kosong');
                     return;
                   }
                   
-                  final newProduct = ProductModel(
-                    nama: manualName, // Gunakan nama asli yang diketik
-                    deskripsi: '', 
-                    kg: Helpers.parseNumber(kg.text), 
-                    harga: 0, 
-                    stokTotal: 0
-                  );
+                  final existing = products.where((p) => p.nama.toLowerCase() == manualName.toLowerCase()).firstOrNull;
                   
-                  await ProductRepository().create(newProduct);
-                  
-                  // Ambil ID dari produk baru
-                  final updatedProducts = await ProductRepository().getAll();
-                  final createdProd = updatedProducts.firstWhere((p) => p.nama == manualName);
-                  
-                  pId = createdProd.id!;
-                  pNama = createdProd.nama;
+                  if (existing != null) {
+                    pId = existing.id!;
+                    pNama = existing.nama;
+                  } else {
+                    final newProduct = ProductModel(
+                      nama: manualName, 
+                      deskripsi: '', 
+                      kg: Helpers.parseNumber(kg.text), 
+                      harga: 0, 
+                      stokTotal: 0
+                    );
+                    
+                    await ProductRepository().create(newProduct);
+                    
+                    final updatedProducts = await ProductRepository().getAll();
+                    final createdProd = updatedProducts.firstWhere((p) => p.nama == manualName);
+                    
+                    pId = createdProd.id!;
+                    pNama = createdProd.nama;
+                  }
                 }
 
                 onAdd(StockInItem(productId: pId, productNama: pNama, kg: Helpers.parseNumber(kg.text), total: t));
