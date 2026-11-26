@@ -52,7 +52,9 @@ class _LaporanStockInPageState extends State<LaporanStockInPage> with SingleTick
       ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
 
-      await Gal.putImageBytes(pngBytes, name: 'laporan_masuk_${DateTime.now().millisecondsSinceEpoch}');
+      // PERBAIKAN: Parameter 'name:' dihapus karena gal 2.1.2 tidak mendukungnya
+      await Gal.putImageBytes(pngBytes);
+      
       if (mounted) AppSnackBar.success(context, 'Gambar berhasil disimpan ke Galeri');
     } catch (e) {
       if (mounted) AppSnackBar.error(context, 'Gagal menyimpan gambar: $e');
